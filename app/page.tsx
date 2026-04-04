@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 
 export default function Room138() {
-  const [phase, setPhase] = useState<'APPEAR' | 'DUEL' | 'THROWING' | 'RESULT'>('APPEAR');
+  const [phase, setPhase] = useState<'APPEAR' | 'COLOR' | 'CHARGE' | 'AIM' | 'THROWING' | 'RESULT'>('APPEAR');
   const [status, setStatus] = useState<'IDLE' | 'SUCCESS' | 'ESCAPED'>('IDLE');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedPos, setSelectedPos] = useState<number | null>(null); // 0:左, 1:中, 2:右
+  const [selectedPos, setSelectedPos] = useState<number | null>(null);
   const [tapCount, setTapCount] = useState(0);
   const [targetConfig, setTargetConfig] = useState({ taps: 0, position: 1 });
   const [startY, setStartY] = useState(0);
@@ -32,7 +32,7 @@ export default function Room138() {
 
   const onTouchStart = (e: React.TouchEvent) => setStartY(e.touches[0].clientY);
   const onTouchMove = (e: React.TouchEvent) => {
-    if (phase !== 'DUEL' || selectedPos === null) return;
+    if (phase !== 'AIM' || selectedPos === null) return;
     const currentY = e.touches[0].clientY;
     if (startY - currentY > 50) handleThrow();
   };
@@ -49,7 +49,7 @@ export default function Room138() {
         setStatus('ESCAPED');
         setTimeout(() => setPhase('APPEAR'), 6500);
       }
-    }, 400); // 吸い込まれるスピードを速く
+    }, 400);
   };
 
   return (
@@ -61,58 +61,43 @@ export default function Room138() {
       </header>
 
       {/* Card Visual */}
-      <div onDoubleClick={() => phase === 'APPEAR' && setPhase('DUEL')}
+      <div onDoubleClick={() => phase === 'APPEAR' && setPhase('COLOR')}
         className={`relative w-64 aspect-[1/1.4] rounded-lg border border-zinc-200 bg-white shadow-sm flex flex-col items-center justify-center transition-all duration-[800ms]
           ${phase === 'APPEAR' ? 'scale-90 opacity-40' : 'scale-100 opacity-100'}
           ${status === 'ESCAPED' && phase === 'RESULT' ? 'delay-[5000ms] translate-x-[150vw] -rotate-12' : ''}
           ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-[flip_1s_ease-in-out_5000ms_3]' : ''}
         `}
       >
-        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center relative overflow-hidden">
-          <div className="text-[10px] opacity-10 font-bold tracking-widest">{status === 'SUCCESS' ? 'CAPTURED' : '138'}</div>
-          
-          {/* 吸い込まれた三角の着弾点 */}
-          {phase === 'THROWING' && (
-             <div 
-               className="absolute bottom-0 w-8 h-10 transition-all duration-300 ease-in"
-               style={{ 
-                 backgroundColor: selectedColor || '#000',
-                 left: `${(selectedPos! * 33.3) + 5}%`,
-                 clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-                 transform: 'translateY(-100px) scale(0.5)',
-                 opacity: 0
-               }}
-             />
-          )}
+        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center relative overflow-hidden text-[10px] opacity-10 font-bold tracking-widest">
+          {status === 'SUCCESS' ? 'CAPTURED' : '138'}
         </div>
 
         {/* 手順1: 色選択 */}
-        <div className={`absolute -bottom-16 flex gap-4 transition-all duration-500 ${phase === 'DUEL' && !selectedColor ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`absolute -bottom-16 flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {colors.map((c) => (
-            <button key={c.name} onClick={() => setSelectedColor(c.code)} className="w-6 h-6 rounded-full shadow-sm active:scale-125" style={{ backgroundColor: c.code }} />
+            <button key={c.name} onClick={() => { setSelectedColor(c.code); setPhase('CHARGE'); }} className="w-6 h-6 rounded-full shadow-sm active:scale-125" style={{ backgroundColor: c.code }} />
           ))}
         </div>
 
-        {/* 手順2: 位置選択 (〇が三つ) */}
-        <div className={`absolute -bottom-16 flex gap-12 transition-all duration-500 ${phase === 'DUEL' && selectedColor && selectedPos === null ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        {/* 手順3: 位置選択 (〇が三つ) - 充電が終わった後に出現 */}
+        <div className={`absolute -bottom-24 flex gap-12 transition-all duration-500 ${phase === 'AIM' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           {[0, 1, 2].map((i) => (
             <button 
               key={i} 
               onClick={() => setSelectedPos(i)} 
-              className="w-8 h-8 rounded-full border-2 border-zinc-300 flex items-center justify-center active:bg-zinc-200"
+              className={`w-8 h-8 rounded-full border-2 transition-all ${selectedPos === i ? 'bg-zinc-800 border-zinc-800' : 'border-zinc-300'}`}
             >
-              <div className="w-2 h-2 bg-zinc-400 rounded-full" />
+              <div className={`w-2 h-2 rounded-full mx-auto ${selectedPos === i ? 'bg-white' : 'bg-zinc-300'}`} />
             </button>
           ))}
         </div>
       </div>
 
-      {/* 手順3: 三角ボタンを叩いて投擲 */}
+      {/* 手順2: 三角ボタンを叩いて充電 -> 位置選択へ */}
       <div 
-        onTouchStart={onTouchStart} onTouchMove={onTouchMove}
         className={`absolute bottom-16 flex flex-col items-center transition-all duration-500
-        ${phase === 'DUEL' && selectedPos !== null ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
-        ${phase === 'THROWING' ? 'translate-y-[-200px] scale-0 opacity-0' : ''}
+        ${(phase === 'CHARGE' || phase === 'AIM') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
+        ${phase === 'THROWING' ? 'translate-y-[-250px] scale-0 opacity-0' : ''}
       `}>
         {/* タップ回数インジケーター */}
         <div className="flex gap-1.5 mb-6">
@@ -121,16 +106,33 @@ export default function Room138() {
           ))}
         </div>
 
-        {/* 叩く三角ボタン */}
+        {/* 三角ボタン */}
         <button 
-          onClick={() => setTapCount(prev => Math.min(prev + 1, 6))}
-          className="relative w-20 h-24 flex items-end justify-center active:scale-90 transition-transform"
+          onClick={() => {
+            if (phase === 'CHARGE') {
+              setTapCount(prev => Math.min(prev + 1, 6));
+            }
+          }}
+          onTouchStart={onTouchStart} onTouchMove={onTouchMove}
+          className="relative w-20 h-24 flex items-end justify-center active:scale-95 transition-transform"
         >
           <svg width="70" height="90" viewBox="0 0 70 90">
-            <path d="M35 0L70 90H0L35 0Z" fill={selectedColor || '#CCC'} />
+            <path d="M35 0L70 90H0L35 0Z" fill={selectedColor || '#CCC'} className="transition-colors duration-300" />
           </svg>
-          <div className="absolute bottom-4 text-[8px] font-black text-white uppercase">TAP & FLICK</div>
+          <div className="absolute bottom-4 text-[8px] font-black text-white uppercase">
+            {phase === 'CHARGE' ? 'CHARGE' : 'READY'}
+          </div>
         </button>
+
+        {/* 充電完了後に「狙いを定める」ためのガイド */}
+        {phase === 'CHARGE' && tapCount > 0 && (
+          <button 
+            onClick={() => setPhase('AIM')}
+            className="mt-4 px-4 py-1 border border-zinc-900 text-[8px] font-black tracking-widest animate-pulse"
+          >
+            SET TARGET
+          </button>
+        )}
       </div>
 
       {/* 判定表示 */}
