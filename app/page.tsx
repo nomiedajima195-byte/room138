@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// カードナンバー用（簡易実装）
-let cardCounter = 138001;
-
 export default function Room138() {
   const [mode, setMode] = useState<'FISHING' | 'MINT'>('FISHING');
   
@@ -15,34 +12,30 @@ export default function Room138() {
   const [tapCount, setTapCount] = useState(0);
   const [targetConfig, setTargetConfig] = useState({ color: '', taps: 0 });
   const [startY, setStartY] = useState(0);
-  const [currentCard, setCurrentCard] = useState<{ id: number; title: string; url: string } | null>(null);
+  const [currentCard, setCurrentCard] = useState<any>(null);
 
   // 生成（ミント）用の状態
   const [mintTitle, setMintTitle] = useState('');
   const [mintText, setMintText] = useState('');
   const [mintImage, setMintImage] = useState<string | null>(null);
-  const [mintCardNumber, setMintCardNumber] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const demoCards = [
-    { id: 1, title: '昨日のレバニラ定食', url: 'https://images.unsplash.com/photo-1623157618214-3d9a10129e74?q=80&w=400' },
-    { id: 2, title: '錆びた自転車のサドル', url: 'https://images.unsplash.com/photo-1596719875151-5b7f7eb01524?q=80&w=400' },
-    { id: 3, title: '品種別米粒（コシヒカリ）', url: 'https://images.unsplash.com/photo-1596377317730-01c56ac4d216?q=80&w=400' },
-    { id: 10, title: 'ソトマワール氏（偽物）', url: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe1?q=80&w=400' }
-  ];
+  // ローカルストレージからカードを読み込む / 無ければ初期カード
+  const getSavedCards = () => {
+    if (typeof window === 'undefined') return [];
+    const saved = localStorage.getItem('room138_cards');
+    return saved ? JSON.parse(saved) : [{ id: 138000, title: '初期プロトタイプ', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400', text: '最初のゴミデータ。' }];
+  };
 
-  const colors = [
-    { name: '赤', code: '#FF4B4B' }, { name: '青', code: '#4B7BFF' },
-    { name: '黄', code: '#FFD600' }, { name: '緑', code: '#00D656' },
-    { name: '紫', code: '#A64BFF' }, { name: '黒', code: '#000000' }
-  ];
-
+  // フィッシングの初期化（保存されたカードからランダムに選ぶ）
   useEffect(() => {
     if (mode === 'FISHING' && phase === 'APPEAR') {
-      const card = demoCards[Math.floor(Math.random() * demoCards.length)];
+      const cards = getSavedCards();
+      const card = cards[Math.floor(Math.random() * cards.length)];
       setCurrentCard(card);
+      
       setTargetConfig({
-        color: colors[Math.floor(Math.random() * 6)].code,
+        color: ['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'][Math.floor(Math.random() * 6)],
         taps: Math.floor(Math.random() * 3) + 1
       });
       setStatus('IDLE');
@@ -69,15 +62,33 @@ export default function Room138() {
     }
   };
 
+  // カードを保存する（ミント）
+  const handleMintRelease = () => {
+    if (!mintImage && !mintTitle) return alert('内容が空です');
+    
+    const newCard = {
+      id: Date.now(),
+      title: mintTitle || 'UNTITLED',
+      text: mintText || '',
+      url: mintImage || '',
+    };
+
+    const updatedCards = [...getSavedCards(), newCard];
+    localStorage.setItem('room138_cards', JSON.stringify(updatedCards));
+    
+    alert(`CARD NO.${newCard.id} をストレージに保存しました。`);
+    setMode('FISHING');
+    setPhase('APPEAR');
+  };
+
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
         <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
-        <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">USER: TEST</span>
+        <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">STORAGE: {getSavedCards().length}</span>
       </header>
 
-      {/* --- フィッシングモード --- */}
       {mode === 'FISHING' && (
         <>
           <div onDoubleClick={() => phase === 'APPEAR' && setPhase('COLOR')}
@@ -88,32 +99,27 @@ export default function Room138() {
               ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-[flip_1s_ease-in-out_5000ms_3]' : ''}
             `}
           >
-            {/* 上半分：画像エリア */}
             <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center">
-              <img src={currentCard?.url} alt="" className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-0'}`} />
+              {currentCard?.url && <img src={currentCard.url} alt="" className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-0'}`} />}
               {phase !== 'RESULT' && <div className="absolute inset-0 bg-white/90 flex items-center justify-center"><span className="text-[10px] opacity-10 font-black tracking-widest">138</span></div>}
             </div>
-            {/* 下半分：テキストエリア */}
             <div className="flex-1 p-4 bg-white relative">
                {phase === 'RESULT' && status === 'SUCCESS' && (
                  <>
-                   <div className="text-[10px] font-bold tracking-widest uppercase mb-2">{currentCard?.title}</div>
-                   <div className="text-[8px] opacity-40 leading-relaxed">Captured artifact data.<br/>168 hours until deletion.</div>
-                   <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{String(currentCard?.id).padStart(6, '0')} | LOT 01/150</div>
+                   <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard?.title}</div>
+                   <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard?.text || 'No data description.'}</div>
+                   <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard?.id} | LOT 01/150</div>
                  </>
                )}
             </div>
           </div>
 
-          {/* 操作パネル */}
           <div className="absolute bottom-32 w-full flex flex-col items-center z-30">
-            {/* 手順1: 色選択 */}
             <div className={`flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {colors.map((c) => (
-                <button key={c.name} onClick={() => { setSelectedColor(c.code); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm" style={{ backgroundColor: c.code }} />
+              {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
+                <button key={c} onClick={() => { setSelectedColor(c); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm" style={{ backgroundColor: c }} />
               ))}
             </div>
-            {/* 手順2: チャージ＆フリック */}
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} onTouchMove={onThrowMove}
               className={`flex flex-col items-center transition-all duration-500 ${(phase === 'CHARGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'} ${phase === 'THROWING' ? 'translate-y-[-250px] scale-0 opacity-0' : ''}`}>
               <div className="flex gap-4 mb-6">
@@ -126,16 +132,14 @@ export default function Room138() {
             </div>
           </div>
 
-          {/* ◎生成ボタン：フィッシング開始で非表示 */}
           <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-40 transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
-            <button onClick={() => { setMintCardNumber(cardCounter++); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={() => { setMintTitle(''); setMintText(''); setMintImage(null); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90 transition-all">
               <div className="w-8 h-8 rounded-full border-[6px] border-zinc-900" />
             </button>
           </footer>
         </>
       )}
 
-      {/* --- 生成（ミント）モード --- */}
       {mode === 'MINT' && (
         <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center p-6 pt-24 animate-slideUp">
           <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden">
@@ -149,19 +153,18 @@ export default function Room138() {
             <div className="relative flex-1 p-5 flex flex-col">
               <textarea value={mintText} onChange={(e) => setMintText(e.target.value.slice(0, 140))} placeholder="DESCRIPTION..." className="w-full flex-1 text-[10px] leading-relaxed bg-transparent outline-none resize-none" />
               <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40">
-                <span>NO.{String(mintCardNumber).padStart(6, '0')}</span>
+                <span>NEW ARTIFACT</span>
                 <span>LOT 01/150</span>
               </div>
             </div>
           </div>
           <div className="mt-12 w-full max-w-[256px] flex gap-4">
             <button onClick={() => setMode('FISHING')} className="flex-1 py-3 border border-zinc-200 text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-50">CANCEL</button>
-            <button onClick={() => { alert('RELEASED'); setMode('FISHING'); setPhase('APPEAR'); }} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-700">RELEASE</button>
+            <button onClick={handleMintRelease} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-700">RELEASE</button>
           </div>
         </div>
       )}
 
-      {/* 判定表示 */}
       {phase === 'RESULT' && <div className="absolute top-24 text-[10px] tracking-[1.5em] font-black opacity-30 animate-pulse">{status === 'SUCCESS' ? 'CAPTURED' : 'BALETA'}</div>}
 
       <style jsx global>{`
