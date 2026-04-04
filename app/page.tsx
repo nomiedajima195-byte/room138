@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 export default function Room138() {
+  const [isMounted, setIsMounted] = useState(false); // ハイドレーションエラー対策
   const [mode, setMode] = useState<'FISHING' | 'MINT'>('FISHING');
   
   // フィッシング用の状態
@@ -20,16 +21,20 @@ export default function Room138() {
   const [mintImage, setMintImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ローカルストレージからカードを読み込む / 無ければ初期カード
+  // クライアント側でのみ実行されるマウント確認
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // ローカルストレージ操作
   const getSavedCards = () => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('room138_cards');
-    return saved ? JSON.parse(saved) : [{ id: 138000, title: '初期プロトタイプ', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400', text: '最初のゴミデータ。' }];
+    return saved ? JSON.parse(saved) : [{ id: 138000, title: 'PROTO', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400' }];
   };
 
-  // フィッシングの初期化（保存されたカードからランダムに選ぶ）
   useEffect(() => {
-    if (mode === 'FISHING' && phase === 'APPEAR') {
+    if (isMounted && mode === 'FISHING' && phase === 'APPEAR') {
       const cards = getSavedCards();
       const card = cards[Math.floor(Math.random() * cards.length)];
       setCurrentCard(card);
@@ -42,9 +47,8 @@ export default function Room138() {
       setSelectedColor(null);
       setTapCount(0);
     }
-  }, [phase, mode]);
+  }, [phase, mode, isMounted]);
 
-  // フィッシング操作
   const onThrowMove = (e: React.TouchEvent) => {
     if (phase !== 'CHARGE' || tapCount === 0) return;
     if (startY - e.touches[0].clientY > 60) {
@@ -62,31 +66,26 @@ export default function Room138() {
     }
   };
 
-  // カードを保存する（ミント）
   const handleMintRelease = () => {
-    if (!mintImage && !mintTitle) return alert('内容が空です');
-    
-    const newCard = {
-      id: Date.now(),
-      title: mintTitle || 'UNTITLED',
-      text: mintText || '',
-      url: mintImage || '',
-    };
-
+    if (!mintImage && !mintTitle) return alert('EMPTY');
+    const newCard = { id: Date.now(), title: mintTitle || 'UNTITLED', text: mintText || '', url: mintImage || '' };
     const updatedCards = [...getSavedCards(), newCard];
     localStorage.setItem('room138_cards', JSON.stringify(updatedCards));
-    
-    alert(`CARD NO.${newCard.id} をストレージに保存しました。`);
     setMode('FISHING');
     setPhase('APPEAR');
   };
+
+  // マウント前は何も表示しない（または最小限のスケルトン）
+  if (!isMounted) return <div className="fixed inset-0 bg-[#F5F5F5]" />;
 
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
         <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
-        <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">STORAGE: {getSavedCards().length}</span>
+        <span className="text-[10px] tracking-[0.2em] font-bold opacity-30 uppercase">
+          STORAGE: {getSavedCards().length}
+        </span>
       </header>
 
       {mode === 'FISHING' && (
@@ -107,8 +106,8 @@ export default function Room138() {
                {phase === 'RESULT' && status === 'SUCCESS' && (
                  <>
                    <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard?.title}</div>
-                   <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard?.text || 'No data description.'}</div>
-                   <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard?.id} | LOT 01/150</div>
+                   <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard?.text || 'No description.'}</div>
+                   <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard?.id}</div>
                  </>
                )}
             </div>
@@ -117,7 +116,7 @@ export default function Room138() {
           <div className="absolute bottom-32 w-full flex flex-col items-center z-30">
             <div className={`flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
-                <button key={c} onClick={() => { setSelectedColor(c); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm" style={{ backgroundColor: c }} />
+                <button key={c} onClick={() => { setSelectedColor(c); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm active:scale-125" style={{ backgroundColor: c }} />
               ))}
             </div>
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} onTouchMove={onThrowMove}
@@ -133,7 +132,7 @@ export default function Room138() {
           </div>
 
           <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-40 transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
-            <button onClick={() => { setMintTitle(''); setMintText(''); setMintImage(null); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={() => { setMintTitle(''); setMintText(''); setMintImage(null); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90">
               <div className="w-8 h-8 rounded-full border-[6px] border-zinc-900" />
             </button>
           </footer>
@@ -153,12 +152,12 @@ export default function Room138() {
             <div className="relative flex-1 p-5 flex flex-col">
               <textarea value={mintText} onChange={(e) => setMintText(e.target.value.slice(0, 140))} placeholder="DESCRIPTION..." className="w-full flex-1 text-[10px] leading-relaxed bg-transparent outline-none resize-none" />
               <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40">
-                <span>NEW ARTIFACT</span>
+                <span>NEW MINT</span>
                 <span>LOT 01/150</span>
               </div>
             </div>
           </div>
-          <div className="mt-12 w-full max-w-[256px] flex gap-4">
+          <div className="mt-12 w-full max-w-[256px] flex gap-4 px-4">
             <button onClick={() => setMode('FISHING')} className="flex-1 py-3 border border-zinc-200 text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-50">CANCEL</button>
             <button onClick={handleMintRelease} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-700">RELEASE</button>
           </div>
