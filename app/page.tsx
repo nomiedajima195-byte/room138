@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// カードの型を定義（ビルドエラー防止）
 interface Card {
   id: number;
   title: string;
@@ -13,10 +12,8 @@ interface Card {
 export default function Room138() {
   const [isMounted, setIsMounted] = useState(false);
   const [mode, setMode] = useState<'FISHING' | 'MINT'>('FISHING');
-  
   const [phase, setPhase] = useState<'APPEAR' | 'COLOR' | 'HOOKING' | 'CHALLENGE' | 'LANDING' | 'RESULT'>('APPEAR');
   const [status, setStatus] = useState<'IDLE' | 'HIT' | 'MISSED' | 'SUCCESS' | 'FAILED'>('IDLE');
-  
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [tapCount, setTapCount] = useState(0);
   const [targetConfig, setTargetConfig] = useState({ color: '', taps: 0 });
@@ -30,7 +27,6 @@ export default function Room138() {
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  // 型を指定した取得関数
   const getSavedCards = (): Card[] => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('room138_cards');
@@ -52,44 +48,57 @@ export default function Room138() {
     }
   }, [phase, mode, isMounted]);
 
+  // 第一段階：フリック（ボタン投げ込み）
   const handleFirstFlick = () => {
+    setPhase('HOOKING'); // ボタン消滅 & 投げ込みアニメ開始
     const isColorMatch = selectedColor === targetConfig.color;
-    setPhase('HOOKING');
-    if (isColorMatch) {
-      setStatus('HIT');
-      setTimeout(() => { setPhase('CHALLENGE'); setStatus('IDLE'); }, 2000);
-    } else {
-      setStatus('MISSED');
-      setTimeout(() => setPhase('APPEAR'), 3000);
-    }
+
+    // 投げ込まれてからカードが反応するまでの「溜め」
+    setTimeout(() => {
+      if (isColorMatch) {
+        setStatus('HIT'); // 揺れ開始
+        // 揺れとチラ見せを3秒間しっかり見せる
+        setTimeout(() => {
+          setPhase('CHALLENGE');
+          setStatus('IDLE');
+        }, 3000);
+      } else {
+        setStatus('MISSED'); // 揺れて逃走
+        setTimeout(() => setPhase('APPEAR'), 4000);
+      }
+    }, 600); 
   };
 
+  // 第二段階：最終フリック（吸い込み & 最終判定）
   const handleFinalFlick = () => {
-    const isTapMatch = tapCount === targetConfig.taps;
-    setPhase('LANDING');
+    setPhase('LANDING'); // 吸い込み開始
+
     setTimeout(() => {
       setPhase('RESULT');
+      const isTapMatch = tapCount === targetConfig.taps;
       if (isTapMatch) {
-        setStatus('SUCCESS');
-        setTimeout(() => setPhase('APPEAR'), 10000);
+        setStatus('SUCCESS'); // くるっと回って5秒待機、その後3回転
+        setTimeout(() => setPhase('APPEAR'), 15000);
       } else {
         setStatus('FAILED');
         setTimeout(() => setPhase('APPEAR'), 6000);
       }
-    }, 800);
+    }, 1000);
   };
 
   if (!isMounted) return <div className="fixed inset-0 bg-[#F5F5F5]" />;
 
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
+      
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
-        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">Rubbish</h1>
+        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
         <span className="text-[10px] tracking-[0.2em] font-bold opacity-30 uppercase">STORAGE: {getSavedCards().length}</span>
       </header>
 
       {mode === 'FISHING' && (
         <>
+          {/* カード本体 */}
           <div onDoubleClick={() => phase === 'APPEAR' && setPhase('COLOR')}
             style={{ aspectRatio: '1 / 1.618' }}
             className={`relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-sm flex flex-col overflow-hidden transition-all duration-[800ms] z-20
@@ -97,45 +106,67 @@ export default function Room138() {
               ${status === 'HIT' ? 'animate-shake' : ''}
               ${status === 'MISSED' ? 'animate-missed' : ''}
               ${phase === 'LANDING' ? 'animate-suck' : ''}
-              ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-success' : ''}
-              ${status === 'FAILED' && phase === 'RESULT' ? 'animate-failed' : ''}`}
+              ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-result-success' : ''}
+              ${status === 'FAILED' && phase === 'RESULT' ? 'animate-result-failed' : ''}
+            `}
           >
+            {/* 上半分：画像 */}
             <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center">
               {currentCard?.url && (
-                <img src={currentCard.url} alt="" className={`w-full h-full object-cover transition-opacity duration-300
-                    ${(status === 'HIT' || status === 'MISSED' || phase === 'RESULT') ? 'opacity-100' : 'opacity-0'}`} />
+                <img src={currentCard.url} alt="" className={`w-full h-full object-cover transition-opacity duration-500
+                    ${(status === 'HIT' || status === 'MISSED' || phase === 'RESULT') ? 'opacity-100' : 'opacity-0'}`} 
+                />
               )}
-              <div className={`absolute inset-0 bg-white flex items-center justify-center z-10 transition-opacity duration-300
+              {/* 裏面 */}
+              <div className={`absolute inset-0 bg-white flex items-center justify-center z-10 transition-opacity duration-500
                 ${(status === 'HIT' || status === 'MISSED' || phase === 'RESULT') ? 'opacity-0' : 'opacity-100'}`}>
-                <span className="text-[10px] opacity-10 font-black tracking-widest uppercase">Rubbish</span>
+                <span className="text-[10px] opacity-20 font-black tracking-widest uppercase">room138</span>
               </div>
             </div>
+            
+            {/* 下半分：テキスト */}
             <div className="flex-1 p-4 bg-white relative">
                {phase === 'RESULT' && status === 'SUCCESS' && (
-                 <>
+                 <div className="animate-fadeIn delay-[1000ms]">
                    <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard?.title}</div>
                    <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard?.text}</div>
                    <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard?.id}</div>
-                 </>
+                 </div>
                )}
             </div>
           </div>
 
+          {/* 操作系 */}
           <div className="absolute bottom-32 w-full flex flex-col items-center z-30">
-            <div className={`flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {/* 色選択 */}
+            <div className={`flex gap-4 transition-all duration-700 ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
-                <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-lg' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+                <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-xl' : 'border-transparent'}`} style={{ backgroundColor: c }} />
               ))}
             </div>
-            <div className={`flex gap-4 mb-6 transition-all duration-500 ${phase === 'CHALLENGE' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-              {[...Array(3)].map((_, i) => <div key={i} className={`w-3 h-3 rounded-full border-2 border-zinc-300 transition-colors ${tapCount > i ? 'bg-zinc-800 border-zinc-800' : ''}`} />)}
+
+            {/* 回数表示 */}
+            <div className={`flex gap-4 mb-8 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {[...Array(3)].map((_, i) => <div key={i} className={`w-4 h-4 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />)}
             </div>
+
+            {/* 三角ボタン（投げ込み演出） */}
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} 
-                 onTouchMove={(e) => { if (startY - e.touches[0].clientY > 60) { if (phase === 'COLOR' && selectedColor) handleFirstFlick(); if (phase === 'CHALLENGE' && tapCount > 0) handleFinalFlick(); } }}
-              className={`flex flex-col items-center transition-all duration-500 ${(phase === 'COLOR' || phase === 'CHALLENGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'} ${phase === 'LANDING' ? 'translate-y-[100px] scale-[0.2] opacity-0' : ''}`}>
-              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 3)); }} className="relative w-24 h-28 flex items-end justify-center active:scale-95 transition-transform">
+                 onTouchMove={(e) => {
+                   if (startY - e.touches[0].clientY > 60) {
+                     if (phase === 'COLOR' && selectedColor) handleFirstFlick();
+                     if (phase === 'CHALLENGE' && tapCount > 0) handleFinalFlick();
+                   }
+                 }}
+              className={`flex flex-col items-center transition-all duration-700 
+              ${(phase === 'COLOR' || phase === 'CHALLENGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
+              ${(phase === 'HOOKING' || phase === 'LANDING') ? 'translate-y-[-300px] scale-0 opacity-0' : ''}`}>
+              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 3)); }} 
+                className="relative w-24 h-28 flex items-end justify-center active:scale-95 transition-transform">
                 <svg width="80" height="100" viewBox="0 0 80 100"><path d="M40 0L80 100H0L40 0Z" fill={selectedColor || '#CCC'} /></svg>
-                <div className="absolute bottom-5 text-[8px] font-black text-white uppercase tracking-tighter">{phase === 'COLOR' ? (selectedColor ? 'FLICK' : 'COLOR') : (tapCount === 0 ? 'TAP' : 'FLICK')}</div>
+                <div className="absolute bottom-5 text-[8px] font-black text-white uppercase tracking-tighter">
+                  {phase === 'COLOR' ? (selectedColor ? 'PUSH' : 'COLOR') : (tapCount === 0 ? 'TAP' : 'PUSH')}
+                </div>
               </button>
             </div>
           </div>
@@ -148,6 +179,7 @@ export default function Room138() {
         </>
       )}
 
+      {/* ミント画面 */}
       {mode === 'MINT' && (
         <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center p-6 pt-24 animate-slideUp">
            <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden">
@@ -160,7 +192,7 @@ export default function Room138() {
             </div>
             <div className="relative flex-1 p-5 flex flex-col">
               <textarea value={mintText} onChange={(e) => setMintText(e.target.value.slice(0, 140))} placeholder="DESCRIPTION..." className="w-full flex-1 text-[10px] leading-relaxed bg-transparent outline-none resize-none" />
-              <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40"><span>NEW ARTIFACT</span><span>LOT 01/150</span></div>
+              <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40"><span>ARTIFACT</span><span>LOT 01/150</span></div>
             </div>
           </div>
           <div className="mt-12 w-full max-w-[256px] flex gap-4 px-4">
@@ -176,16 +208,38 @@ export default function Room138() {
       )}
 
       <style jsx global>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px) rotate(-2deg); } 40% { transform: translateX(10px) rotate(2deg); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.4s ease-in-out infinite; }
-        @keyframes missed { 0% { transform: translateX(0); } 10% { transform: scale(1.05); } 100% { transform: translateX(150vw) rotate(20deg); } }
-        .animate-missed { animation: missed 0.6s cubic-bezier(0.45, 0, 0.55, 1) 0.3s forwards; }
-        @keyframes suck { 0% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(0.1) translateY(300px); opacity: 0; } }
+        /* 1. チラ見せ・揺れ */
+        @keyframes shake { 0%, 100% { transform: translateX(0) rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-15px) rotate(-3deg); } 20%, 40%, 60%, 80% { transform: translateX(15px) rotate(3deg); } }
+        .animate-shake { animation: shake 0.6s ease-in-out infinite; }
+        
+        /* 2. 失敗（逃走） */
+        @keyframes missed { 0% { transform: scale(1.1); } 100% { transform: translateX(150vw) rotate(30deg); } }
+        .animate-missed { animation: missed 0.8s cubic-bezier(0.5, 0, 1, 0.5) 0.5s forwards; }
+
+        /* 3. 吸い込み */
+        @keyframes suck { 0% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(0) translateY(400px); opacity: 0; } }
         .animate-suck { animation: suck 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; }
-        @keyframes success { 0% { transform: scale(0.1) translateY(300px); opacity: 0; } 40% { transform: scale(1.1) translateY(-20px); opacity: 1; } 60% { transform: scale(1) translateY(0); rotate: Y(0deg); } 100% { transform: rotateY(1080deg); } }
-        .animate-success { animation: success 3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes failed { 0% { transform: scale(0.1) translateY(300px); opacity: 0; } 40% { transform: scale(1) translateY(0); opacity: 1; } 60% { transform: translateX(0); } 100% { transform: translateX(-150vw) rotate(-30deg); } }
-        .animate-failed { animation: failed 3s ease-in forwards; }
+
+        /* 4. 成功：くるっと表面 → 5秒待機 → 3回転 */
+        @keyframes result-success {
+          0% { transform: scale(0) translateY(400px); opacity: 0; }
+          15% { transform: scale(1) translateY(0); opacity: 1; rotate: Y(180deg); } /* くるっと表面へ */
+          60% { transform: rotateY(180deg); } /* ここまで5秒ほど待機（全体が10秒のアニメの場合） */
+          100% { transform: rotateY(1260deg); } /* 180 + 1080(3回転) = 1260 */
+        }
+        .animate-result-success { animation: result-success 10s cubic-bezier(0.2, 0, 0.2, 1) forwards; }
+
+        /* 5. 最終失敗 */
+        @keyframes result-failed {
+          0% { transform: scale(0) translateY(400px); opacity: 0; }
+          20% { transform: scale(1) translateY(0); opacity: 1; }
+          50% { transform: translateX(0); }
+          100% { transform: translateX(-150vw) rotate(-40deg); }
+        }
+        .animate-result-failed { animation: result-failed 4s ease-in forwards; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
