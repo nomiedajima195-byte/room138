@@ -9,15 +9,19 @@ interface Card {
   url: string;
 }
 
+type Phase = 'APPEAR' | 'COLOR' | 'HOOKING' | 'CHALLENGE' | 'LANDING' | 'RESULT' | 'SAVING';
+type Status = 'IDLE' | 'HIT' | 'MISSED' | 'SUCCESS' | 'FAILED';
+
 export default function Room138() {
   const [isMounted, setIsMounted] = useState(false);
   const [mode, setMode] = useState<'FISHING' | 'MINT'>('FISHING');
-  const [phase, setPhase] = useState<'APPEAR' | 'COLOR' | 'HOOKING' | 'CHALLENGE' | 'LANDING' | 'RESULT'>('APPEAR');
-  const [status, setStatus] = useState<'IDLE' | 'HIT' | 'MISSED' | 'SUCCESS' | 'FAILED'>('IDLE');
+  const [phase, setPhase] = useState<Phase>('APPEAR');
+  const [status, setStatus] = useState<Status>('IDLE');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [tapCount, setTapCount] = useState(0);
   const [targetConfig, setTargetConfig] = useState({ color: '', taps: 0 });
   const [startY, setStartY] = useState(0);
+  const [cardStartY, setCardStartY] = useState(0);
   const [currentCard, setCurrentCard] = useState<Card | null>(null);
 
   const [mintTitle, setMintTitle] = useState('');
@@ -51,14 +55,10 @@ export default function Room138() {
   const handleFirstFlick = () => {
     setPhase('HOOKING'); 
     const isColorMatch = selectedColor === targetConfig.color;
-
     setTimeout(() => {
       if (isColorMatch) {
         setStatus('HIT'); 
-        setTimeout(() => {
-          setPhase('CHALLENGE');
-          setStatus('IDLE');
-        }, 3000);
+        setTimeout(() => { setPhase('CHALLENGE'); setStatus('IDLE'); }, 3000);
       } else {
         setStatus('MISSED'); 
         setTimeout(() => setPhase('APPEAR'), 4000);
@@ -67,34 +67,36 @@ export default function Room138() {
   };
 
   const handleFinalFlick = () => {
-    setPhase('LANDING'); 
-
+    setPhase('LANDING');
     setTimeout(() => {
       setPhase('RESULT');
       const isTapMatch = tapCount === targetConfig.taps;
       if (isTapMatch) {
         setStatus('SUCCESS'); 
-        setTimeout(() => setPhase('APPEAR'), 16000); 
       } else {
         setStatus('FAILED');
-        setTimeout(() => setPhase('APPEAR'), 6000);
+        setTimeout(() => setPhase('APPEAR'), 4000);
       }
-    }, 1000);
+    }, 2500);
   };
 
   if (!isMounted) return <div className="fixed inset-0 bg-[#F5F5F5]" />;
 
   const getCardRotation = () => {
+    if (phase === 'LANDING' || phase === 'SAVING' || phase === 'RESULT') return undefined; 
     if (status === 'HIT' || status === 'MISSED') return 'rotateY(180deg)'; 
-    if (phase === 'RESULT' && status === 'SUCCESS') return 'rotateY(180deg)'; 
-    if (phase === 'RESULT' && status === 'FAILED') return 'rotateY(180deg)'; 
     return 'rotateY(0deg)'; 
   };
 
-  // デュエルモード（色選択）へ移行する共通関数
-  const enterDuelMode = () => {
-    if (phase === 'APPEAR') setPhase('COLOR');
+  const getCardAnimationClass = () => {
+    if (phase === 'LANDING') return 'animate-final-spin';
+    if (phase === 'RESULT' && status === 'SUCCESS') return 'animate-bounce-3';
+    if (phase === 'RESULT' && status === 'FAILED') return 'animate-fail-escape';
+    if (phase === 'SAVING') return 'animate-save-suck';
+    return '';
   };
+
+  const enterDuelMode = () => { if (phase === 'APPEAR') setPhase('COLOR'); };
 
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
@@ -108,56 +110,45 @@ export default function Room138() {
         <>
           <div 
             onDoubleClick={enterDuelMode}
-            className={`relative w-64 aspect-[1/1.618] z-20 transition-all duration-[800ms]
+            onTouchStart={(e) => { if (phase === 'RESULT' && status === 'SUCCESS') setCardStartY(e.touches[0].clientY); }}
+            onTouchMove={(e) => {
+              if (phase === 'RESULT' && status === 'SUCCESS') {
+                if (e.touches[0].clientY - cardStartY > 60) {
+                  setPhase('SAVING');
+                  setTimeout(() => setPhase('APPEAR'), 600);
+                }
+              }
+            }}
+            className={`relative w-64 aspect-[1/1.618] z-40 transition-all duration-[800ms]
               ${phase === 'APPEAR' ? 'scale-90 opacity-40' : 'scale-100 opacity-100'}
               ${status === 'HIT' ? 'animate-shake' : ''}
               ${status === 'MISSED' ? 'animate-missed' : ''}
-              ${phase === 'LANDING' ? 'animate-suck' : ''}
-              ${status === 'FAILED' && phase === 'RESULT' ? 'animate-result-failed' : ''}
             `}
             style={{ perspective: '1000px' }} 
           >
             <div 
-              // phaseがAPPEARの時はtransitionを外して瞬時に0度に戻す（チラ見え防止）
               className={`relative w-full h-full rounded-[12px] border border-zinc-200 shadow-sm
                 ${phase === 'APPEAR' ? 'transition-none' : 'transition-transform duration-500'}
-                ${phase === 'RESULT' && status === 'SUCCESS' ? 'animate-result-success' : ''}
+                ${getCardAnimationClass()}
               `}
               style={{ 
                 transformStyle: 'preserve-3d', 
                 transform: getCardRotation(), 
               }}
             >
-              {/* カード裏面 */}
-              <div 
-                className="absolute inset-0 bg-white rounded-[12px] flex items-center justify-center p-4 border border-zinc-100"
-                style={{ backfaceVisibility: 'hidden' }} 
-              >
+              <div className="absolute inset-0 bg-white rounded-[12px] flex items-center justify-center p-4 border border-zinc-100" style={{ backfaceVisibility: 'hidden' }}>
                 <div className="w-full h-full border border-zinc-50 rounded-[8px] flex items-center justify-center">
                   <span className="text-[10px] opacity-20 font-black tracking-widest uppercase">room138</span>
                 </div>
               </div>
 
-              {/* カード表面 */}
-              <div 
-                onDoubleClick={enterDuelMode} // 表面の下部タップ対策
-                className="absolute inset-0 bg-white rounded-[12px] flex flex-col overflow-hidden border border-zinc-100"
-                style={{ 
-                  backfaceVisibility: 'hidden', 
-                  transform: 'rotateY(180deg)' 
-                }}
-              >
-                {/* 画像部分 */}
+              <div onDoubleClick={enterDuelMode} className="absolute inset-0 bg-white rounded-[12px] flex flex-col overflow-hidden border border-zinc-100" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                 <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center border-b border-zinc-100">
-                  {currentCard?.url && (
-                    <img src={currentCard.url} alt="" className="w-full h-full object-cover" />
-                  )}
+                  {currentCard?.url && <img src={currentCard.url} alt="" className="w-full h-full object-cover" />}
                 </div>
-                
-                {/* テキスト部分（下部） */}
                 <div className="flex-1 p-4 bg-white relative flex flex-col justify-center">
                    {currentCard && (
-                     <div className="animate-fadeIn delay-[500ms]">
+                     <div>
                        <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard.title}</div>
                        <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard.text}</div>
                        <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard.id}</div>
@@ -168,21 +159,15 @@ export default function Room138() {
             </div>
           </div>
 
-          {/* 操作系（全体的に少し下げてカードとの被りを防止） */}
           <div className="absolute bottom-20 w-full flex flex-col items-center z-30">
-            {/* 色選択 */}
             <div className={`flex gap-4 mb-3 transition-all duration-700 ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
                 <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-xl' : 'border-transparent'}`} style={{ backgroundColor: c }} />
               ))}
             </div>
-
-            {/* 回数表示（mb-8からmb-4に変更し、位置を下げる） */}
             <div className={`flex gap-4 mb-4 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {[...Array(3)].map((_, i) => <div key={i} className={`w-4 h-4 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />)}
             </div>
-
-            {/* 三角ボタン */}
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} 
                  onTouchMove={(e) => {
                    if (startY - e.touches[0].clientY > 60) {
@@ -238,7 +223,6 @@ export default function Room138() {
         </div>
       )}
 
-      {/* 状態ラベル */}
       <div className="absolute top-24 text-[10px] tracking-[1.5em] font-black opacity-20 pointer-events-none uppercase z-50">
         {status === 'HIT' && 'Hit!'}
         {status === 'MISSED' && 'Baleta'}
@@ -247,41 +231,21 @@ export default function Room138() {
       </div>
 
       <style jsx global>{`
-        /* 揺れ */
         @keyframes shake { 0%, 100% { transform: translateX(0) rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translateX(10px) rotate(1deg); } }
         .animate-shake { animation: shake 0.6s ease-in-out infinite; }
-        
-        /* 失敗（逃走） - 【変更】左(-150vw)へ飛んでいくように */
         @keyframes missed { 0% { transform: scale(1.1) rotateY(180deg); } 100% { transform: scale(1.1) rotateY(180deg) translateX(-150vw) rotate(-30deg); } }
         .animate-missed { animation: missed 0.8s cubic-bezier(0.5, 0, 1, 0.5) 1.5s forwards; }
-
-        /* 吸い込み */
-        @keyframes suck { 0% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(0) translateY(400px); opacity: 0; } }
-        .animate-suck { animation: suck 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; }
-
-        /* 成功：くるっと表面 → 5秒待機 → 3回転 */
-        @keyframes result-success {
-          0% { transform: scale(0) translateY(400px); opacity: 0; rotateY(180deg); }
-          15% { transform: scale(1) translateY(0); opacity: 1; rotateY(180deg); } 
-          60% { transform: rotateY(180deg); } 
-          100% { transform: rotateY(1260deg); } 
-        }
-        .animate-result-success { animation: result-success 12s cubic-bezier(0.2, 0, 0.2, 1) forwards; }
-
-        /* 最終失敗 - 【変更】右(150vw)へ飛んでいくように */
-        @keyframes result-failed {
-          0% { transform: scale(0) translateY(400px); opacity: 0; rotateY(180deg); }
-          20% { transform: scale(1) translateY(0); opacity: 1; rotateY(180deg); }
-          50% { transform: rotateY(180deg) translateX(0); }
-          100% { transform: rotateY(180deg) translateX(150vw) rotate(40deg); }
-        }
-        .animate-result-failed { animation: result-failed 4s ease-in forwards; }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }
+        @keyframes final-spin { 0% { transform: rotateY(0deg); } 10% { transform: rotateY(180deg); } 100% { transform: rotateY(1260deg); } }
+        .animate-final-spin { animation: final-spin 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes bounce-3 { 0%, 100% { transform: rotateY(180deg) translateY(0); } 16%, 50%, 83% { transform: rotateY(180deg) translateY(-25px); } 33%, 66% { transform: rotateY(180deg) translateY(0); } }
+        .animate-bounce-3 { animation: bounce-3 1.5s ease-in-out forwards; }
+        @keyframes save-suck { 0% { transform: rotateY(180deg) translateY(0) scale(1); opacity: 1; } 100% { transform: rotateY(180deg) translateY(300px) scale(0.5); opacity: 0; } }
+        .animate-save-suck { animation: save-suck 0.6s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; }
+        @keyframes fail-escape { 0%, 75% { transform: rotateY(180deg) translateX(0) rotate(0deg); } 100% { transform: rotateY(180deg) translateX(150vw) rotate(40deg); } }
+        .animate-fail-escape { animation: fail-escape 4s ease-in forwards; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
   );
-} 
+}
