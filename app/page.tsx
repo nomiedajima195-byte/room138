@@ -44,7 +44,7 @@ export default function Room138() {
       setCurrentCard(cards[Math.floor(Math.random() * cards.length)]);
       setTargetConfig({
         color: ['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'][Math.floor(Math.random() * 6)],
-        taps: Math.floor(Math.random() * 3) + 1
+        taps: Math.floor(Math.random() * 6) + 1 // ★ 1〜6回に変更
       });
       setStatus('IDLE');
       setSelectedColor(null);
@@ -108,7 +108,6 @@ export default function Room138() {
 
       {mode === 'FISHING' && (
         <>
-          {/* カード：z-indexを下げて、操作系より後ろに配置 */}
           <div 
             onDoubleClick={enterDuelMode}
             onTouchStart={(e) => { if (phase === 'RESULT' && status === 'SUCCESS') setCardStartY(e.touches[0].clientY); }}
@@ -160,21 +159,20 @@ export default function Room138() {
             </div>
           </div>
 
-          {/* 操作系：z-indexを50にして、カード(z-10)より手前に配置 */}
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-20 z-50 pointer-events-none">
-            {/* 色選択 */}
             <div className={`flex gap-4 mb-6 transition-all duration-700 pointer-events-auto ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
                 <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-xl' : 'border-transparent'}`} style={{ backgroundColor: c }} />
               ))}
             </div>
 
-            {/* 回数表示 */}
-            <div className={`flex gap-4 mb-6 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {[...Array(3)].map((_, i) => <div key={i} className={`w-4 h-4 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />)}
+            {/* ★ タップ回数表示：6個並ぶように調整 */}
+            <div className={`flex gap-3 mb-6 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className={`w-3 h-3 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />
+              ))}
             </div>
 
-            {/* 三角ボタン */}
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} 
                  onTouchMove={(e) => {
                    if (startY - e.touches[0].clientY > 60) {
@@ -185,7 +183,7 @@ export default function Room138() {
               className={`flex flex-col items-center transition-all duration-700 pointer-events-auto
               ${(phase === 'COLOR' || phase === 'CHALLENGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
               ${(phase === 'HOOKING' || phase === 'LANDING') ? 'translate-y-[-300px] scale-0 opacity-0' : ''}`}>
-              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 3)); }} 
+              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 6)); }} // ★ 上限を6に変更
                 className="relative w-24 h-28 flex items-end justify-center active:scale-95 transition-transform">
                 <svg width="80" height="100" viewBox="0 0 80 100"><path d="M40 0L80 100H0L40 0Z" fill={selectedColor || '#CCC'} /></svg>
                 <div className="absolute bottom-5 text-[8px] font-black text-white uppercase tracking-tighter">
