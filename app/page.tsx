@@ -73,7 +73,7 @@ export default function Room138() {
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
-        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">Rubbish</h1>
+        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
         <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">USER: TEST</span>
       </header>
 
@@ -93,7 +93,7 @@ export default function Room138() {
               <img src={currentCard?.url} alt="" className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-0'}`} />
               {phase !== 'RESULT' && <div className="absolute inset-0 bg-white/90 flex items-center justify-center"><span className="text-[10px] opacity-10 font-black tracking-widest">138</span></div>}
             </div>
-            {/* 下半分：テキストエリア（空） */}
+            {/* 下半分：テキストエリア */}
             <div className="flex-1 p-4 bg-white relative">
                {phase === 'RESULT' && status === 'SUCCESS' && (
                  <>
@@ -126,7 +126,7 @@ export default function Room138() {
             </div>
           </div>
 
-          {/* ◎生成ボタン：フィッシング（デュエル）が始まるとスッと消える */}
+          {/* ◎生成ボタン：フィッシング開始で非表示 */}
           <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-40 transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
             <button onClick={() => { setMintCardNumber(cardCounter++); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90 transition-all">
               <div className="w-8 h-8 rounded-full border-[6px] border-zinc-900" />
