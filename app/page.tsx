@@ -1,17 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Room138() {
   const [phase, setPhase] = useState<'APPEAR' | 'DUEL' | 'THROWING' | 'RESULT'>('APPEAR');
   const [status, setStatus] = useState<'IDLE' | 'SUCCESS' | 'ESCAPED'>('IDLE');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [targetConfig, setTargetConfig] = useState<{ taps: number; position: 'LEFT' | 'CENTER' | 'RIGHT' }>({ taps: 0, position: 'CENTER' });
+  const [targetConfig, setTargetConfig] = useState({ taps: 0, position: 1 }); // 0:LEFT, 1:CENTER, 2:RIGHT
   const [tapCount, setTapCount] = useState(0);
-  const [currentPosition, setCurrentPosition] = useState<'LEFT' | 'CENTER' | 'RIGHT'>('CENTER');
+  const [currentPosIndex, setCurrentPosIndex] = useState(1); // 初期位置は中央(1)
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
-  const [isHoldingTriangle, setIsHoldingTriangle] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHolding, setIsHolding] = useState(false);
 
   const colors = [
     { name: '赤', code: '#FF4B4B' }, { name: '青', code: '#4B7BFF' },
@@ -19,90 +18,69 @@ export default function Room138() {
     { name: '紫', code: '#A64BFF' }, { name: '黒', code: '#000000' }
   ];
 
-  const positions: ('LEFT' | 'CENTER' | 'RIGHT')[] = ['LEFT', 'CENTER', 'RIGHT'];
+  const posLabels = ['LEFT', 'CENTER', 'RIGHT'];
 
-  // 初期化：正解をランダム設定
   useEffect(() => {
     if (phase === 'APPEAR') {
       setTargetConfig({
         taps: Math.floor(Math.random() * 7),
-        position: positions[Math.floor(Math.random() * 3)]
+        position: Math.floor(Math.random() * 3)
       });
       setStatus('IDLE');
       setSelectedColor(null);
       setTapCount(0);
-      setCurrentPosition('CENTER');
+      setCurrentPosIndex(1);
     }
   }, [phase]);
 
-  // ダブルタップでデュエル開始
-  const handleDoubleTap = () => {
-    if (phase === 'APPEAR') setPhase('DUEL');
-  };
-
-  // タッチ開始（三角形を掴む）
-  const onTouchStart = (e: React.TouchEvent, position: 'LEFT' | 'CENTER' | 'RIGHT') => {
+  const onTouchStart = (e: React.TouchEvent) => {
     if (phase !== 'DUEL' || !selectedColor) return;
     setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    setIsHoldingTriangle(true);
-    setCurrentPosition(position);
-    setTapCount(prev => Math.min(prev + 1, 6)); // タップ回数をカウント
+    setIsHolding(true);
+    setTapCount(prev => Math.min(prev + 1, 6)); // 掴んだ瞬間にタップカウント
   };
 
-  // タッチ移動（三角形を移動＆フリック検知）
   const onTouchMove = (e: React.TouchEvent) => {
-    if (!isHoldingTriangle || phase !== 'DUEL') return;
+    if (!isHolding || phase !== 'DUEL') return;
 
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const deltaX = currentX - touchStart.x;
-    const deltaY = currentY - touchStart.y;
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    const deltaX = x - touchStart.x;
+    const deltaY = y - touchStart.y;
 
-    // フリック検知（上に60px以上）
-    if (deltaY < -60) {
+    // 1. 上フリック判定
+    if (deltaY < -70) {
       handleThrow();
       return;
     }
 
-    // 左右移動の検知（指の場所ではなく、相対的な移動量で判定）
-    if (deltaX < -50) setCurrentPosition('LEFT');
-    else if (deltaX > 50) setCurrentPosition('RIGHT');
-    else setCurrentPosition('CENTER');
-  };
-
-  // タッチ終了（掴みを離す）
-  const onTouchEnd = () => {
-    setIsHoldingTriangle(false);
+    // 2. 左右スライド判定（感度調整：80pxごとに位置切り替え）
+    if (deltaX < -60) setCurrentPosIndex(0); // LEFT
+    else if (deltaX > 60) setCurrentPosIndex(2); // RIGHT
+    else setCurrentPosIndex(1); // CENTER
   };
 
   const handleThrow = () => {
     setPhase('THROWING');
-    setIsHoldingTriangle(false);
+    setIsHolding(false);
     
-    // 判定ロジック
     setTimeout(() => {
       setPhase('RESULT');
-      const isColorMatch = true; // 色の判定は将来的に実装（今は全色正解扱い）
-      const isTapMatch = tapCount === targetConfig.taps;
-      const isPositionMatch = currentPosition === targetConfig.position;
+      const isSuccess = tapCount === targetConfig.taps && currentPosIndex === targetConfig.position;
 
-      // 色と位置の両方が合致すれば成功（色はデモのためスルー）
-      if (isTapMatch && isPositionMatch) {
+      if (isSuccess) {
         setStatus('SUCCESS');
-        setTimeout(() => setPhase('APPEAR'), 8000); // 成功時演出を含めてリセット
+        setTimeout(() => setPhase('APPEAR'), 8500); // 5s待機 + 3s回転演出
       } else {
         setStatus('ESCAPED');
-        setTimeout(() => setPhase('APPEAR'), 6000); // 失敗時演出を含めてリセット
+        setTimeout(() => setPhase('APPEAR'), 6500); // 5s待機 + 逃走
       }
     }, 800);
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none"
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none"
+         onTouchMove={onTouchMove} onTouchEnd={() => setIsHolding(false)}>
       
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-50">
         <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
@@ -110,88 +88,65 @@ export default function Room138() {
       </header>
 
       {/* Card Visual */}
-      <div 
-        ref={cardRef}
-        onDoubleClick={handleDoubleTap}
-        className={`
-          relative w-64 aspect-[1/1.4] rounded-lg border border-zinc-200 bg-white shadow-sm
-          flex flex-col items-center justify-center transition-all duration-[800ms]
-          ${phase === 'APPEAR' ? 'scale-90 opacity-60' : 'scale-100 opacity-100'}
+      <div onDoubleClick={() => phase === 'APPEAR' && setPhase('DUEL')}
+        className={`relative w-64 aspect-[1/1.4] rounded-lg border border-zinc-200 bg-white shadow-sm flex flex-col items-center justify-center transition-all duration-[800ms]
+          ${phase === 'APPEAR' ? 'scale-90 opacity-40' : 'scale-100 opacity-100'}
           ${status === 'ESCAPED' && phase === 'RESULT' ? 'delay-[5000ms] translate-x-[150vw] -rotate-12' : ''}
           ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-[flip_1s_ease-in-out_5000ms_3]' : ''}
         `}
       >
-        <div className="text-[8px] tracking-[0.3em] opacity-20 absolute top-4">
-          {phase === 'APPEAR' ? 'DOUBLE TAP TO START' : 'ARTIFACT NO. 138'}
+        <div className="text-[7px] tracking-[0.3em] opacity-20 absolute top-4 uppercase">
+          {phase === 'APPEAR' ? 'Double tap to Duel' : `Pos: ${posLabels[currentPosIndex]}`}
         </div>
-        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center overflow-hidden relative">
-          <div className="text-[10px] opacity-10 font-bold">{status === 'SUCCESS' ? 'CAPTURED' : '138'}</div>
-          
-          {/* 投擲エリアのグリッド（デモ用） */}
+        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center relative overflow-hidden">
+          <div className="text-[10px] opacity-10 font-bold tracking-widest">{status === 'SUCCESS' ? 'CAPTURED' : '138'}</div>
+          {/* 三区画のガイドライン（デュエル中のみ） */}
           {phase === 'DUEL' && (
-            <div className="absolute inset-0 grid grid-cols-3 border border-zinc-100 opacity-30">
-              <div className="border-r border-zinc-100"></div>
-              <div className="border-r border-zinc-100"></div>
-              <div></div>
+            <div className="absolute inset-0 flex opacity-[0.03]">
+              <div className={`flex-1 border-r border-zinc-900 ${currentPosIndex === 0 ? 'bg-zinc-900' : ''}`} />
+              <div className={`flex-1 border-r border-zinc-900 ${currentPosIndex === 1 ? 'bg-zinc-900' : ''}`} />
+              <div className={`flex-1 ${currentPosIndex === 2 ? 'bg-zinc-900' : ''}`} />
             </div>
           )}
         </div>
 
-        {/* 1. 色選択（選択したら消える） */}
-        <div className={`absolute -bottom-16 flex gap-3 transition-all duration-500 ${phase === 'DUEL' && !selectedColor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        {/* 色選択ドット */}
+        <div className={`absolute -bottom-16 flex gap-4 transition-all duration-500 ${phase === 'DUEL' && !selectedColor ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {colors.map((c) => (
-            <button
-              key={c.name}
-              onClick={() => setSelectedColor(c.code)}
-              className="w-6 h-6 rounded-full border-2 border-transparent transition-all active:scale-125"
-              style={{ backgroundColor: c.code }}
-            />
+            <button key={c.name} onClick={() => setSelectedColor(c.code)} className="w-6 h-6 rounded-full" style={{ backgroundColor: c.code }} />
           ))}
         </div>
       </div>
 
-      {/* 2. 三区画の投擲ボタン（色選択後に出現） */}
-      <div 
-        className={`
-          absolute bottom-16 w-64 grid grid-cols-3 gap-2 transition-all duration-500
-          ${phase === 'DUEL' && selectedColor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}
-        `}
-      >
-        {positions.map((pos) => (
-          <div 
-            key={pos}
-            onTouchStart={(e) => onTouchStart(e, pos)}
-            className="flex flex-col items-center gap-4 cursor-pointer"
-          >
-            {/* タップ回数インジケーター（その区画のものを表示） */}
-            <div className={`flex gap-1 transition-opacity ${currentPosition === pos && isHoldingTriangle ? 'opacity-100' : 'opacity-30'}`}>
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={`w-1 h-1 rounded-full transition-all ${currentPosition === pos && isHoldingTriangle && tapCount > i ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-              ))}
-            </div>
+      {/* 一つの二等辺三角形（スライド式） */}
+      <div className={`absolute bottom-16 w-full flex flex-col items-center transition-all duration-500 ${phase === 'DUEL' && selectedColor ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        
+        {/* タップ回数インジケーター */}
+        <div className="flex gap-1.5 mb-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${tapCount > i ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
+          ))}
+        </div>
 
-            {/* 二等辺三角形 */}
-            <div 
-              className={`relative w-16 h-20 flex items-end justify-center transition-all ${currentPosition === pos && isHoldingTriangle ? 'scale-110' : 'scale-100 opacity-60'}`}
-              style={{ transform: currentPosition === pos && isHoldingTriangle ? 'translateY(-10px)' : 'none' }}
-            >
-              <svg width="60" height="75" viewBox="0 0 60 75" fill="none">
-                <path 
-                  d="M30 0L60 75H0L30 0Z" 
-                  fill={selectedColor || '#CCC'} 
-                  className={`opacity-80 transition-colors ${currentPosition === pos && isHoldingTriangle ? 'opacity-100' : 'opacity-40'}`} 
-                />
-              </svg>
-              <div className="absolute bottom-2 text-[7px] font-black text-white">{pos}</div>
-            </div>
-          </div>
-        ))}
+        {/* スライドする三角形 */}
+        <div 
+          onTouchStart={onTouchStart}
+          style={{ transform: `translateX(${(currentPosIndex - 1) * 80}px)` }}
+          className={`relative w-20 h-24 flex items-end justify-center transition-transform duration-200 ease-out active:scale-95`}
+        >
+          <svg width="70" height="90" viewBox="0 0 70 90">
+            <path d="M35 0L70 90H0L35 0Z" fill={selectedColor || '#CCC'} className={`${isHolding ? 'opacity-100' : 'opacity-40'} transition-opacity`} />
+          </svg>
+          <div className="absolute bottom-4 text-[8px] font-black text-white tracking-tighter uppercase">{posLabels[currentPosIndex]}</div>
+        </div>
+        
+        <div className="mt-4 text-[8px] tracking-[0.3em] opacity-20 font-bold">SLIDE & FLICK</div>
       </div>
 
-      {/* Status Overlay */}
+      {/* 判定表示 */}
       {phase === 'RESULT' && (
-        <div className="absolute top-24 text-[10px] tracking-[1em] font-black opacity-40 animate-pulse">
-          {status === 'SUCCESS' ? 'CAPTURED' : 'MISSED'}
+        <div className="absolute top-24 text-[10px] tracking-[1.5em] font-black opacity-30 animate-pulse">
+          {status === 'SUCCESS' ? 'SUCCESS' : 'MISSED'}
         </div>
       )}
 
