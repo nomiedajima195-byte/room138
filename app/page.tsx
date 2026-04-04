@@ -101,13 +101,14 @@ export default function Room138() {
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
-      <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
+      <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[100]">
         <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
         <span className="text-[10px] tracking-[0.2em] font-bold opacity-30 uppercase">STORAGE: {getSavedCards().length}</span>
       </header>
 
       {mode === 'FISHING' && (
         <>
+          {/* カード：z-indexを下げて、操作系より後ろに配置 */}
           <div 
             onDoubleClick={enterDuelMode}
             onTouchStart={(e) => { if (phase === 'RESULT' && status === 'SUCCESS') setCardStartY(e.touches[0].clientY); }}
@@ -119,7 +120,7 @@ export default function Room138() {
                 }
               }
             }}
-            className={`relative w-64 aspect-[1/1.618] z-40 transition-all duration-[800ms]
+            className={`relative w-64 aspect-[1/1.618] z-10 transition-all duration-[800ms]
               ${phase === 'APPEAR' ? 'scale-90 opacity-40' : 'scale-100 opacity-100'}
               ${status === 'HIT' ? 'animate-shake' : ''}
               ${status === 'MISSED' ? 'animate-missed' : ''}
@@ -159,15 +160,21 @@ export default function Room138() {
             </div>
           </div>
 
-          <div className="absolute bottom-20 w-full flex flex-col items-center z-30">
-            <div className={`flex gap-4 mb-3 transition-all duration-700 ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          {/* 操作系：z-indexを50にして、カード(z-10)より手前に配置 */}
+          <div className="absolute inset-0 flex flex-col items-center justify-end pb-20 z-50 pointer-events-none">
+            {/* 色選択 */}
+            <div className={`flex gap-4 mb-6 transition-all duration-700 pointer-events-auto ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
                 <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-xl' : 'border-transparent'}`} style={{ backgroundColor: c }} />
               ))}
             </div>
-            <div className={`flex gap-4 mb-4 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+
+            {/* 回数表示 */}
+            <div className={`flex gap-4 mb-6 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {[...Array(3)].map((_, i) => <div key={i} className={`w-4 h-4 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />)}
             </div>
+
+            {/* 三角ボタン */}
             <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} 
                  onTouchMove={(e) => {
                    if (startY - e.touches[0].clientY > 60) {
@@ -175,7 +182,7 @@ export default function Room138() {
                      if (phase === 'CHALLENGE' && tapCount > 0) handleFinalFlick();
                    }
                  }}
-              className={`flex flex-col items-center transition-all duration-700 
+              className={`flex flex-col items-center transition-all duration-700 pointer-events-auto
               ${(phase === 'COLOR' || phase === 'CHALLENGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
               ${(phase === 'HOOKING' || phase === 'LANDING') ? 'translate-y-[-300px] scale-0 opacity-0' : ''}`}>
               <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 3)); }} 
@@ -188,7 +195,7 @@ export default function Room138() {
             </div>
           </div>
 
-          <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-40 transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-[80] transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <button onClick={() => setMode('MINT')} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90">
               <div className="w-8 h-8 rounded-full border-[6px] border-zinc-900" />
             </button>
@@ -197,7 +204,7 @@ export default function Room138() {
       )}
 
       {mode === 'MINT' && (
-        <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center p-6 pt-24 animate-slideUp">
+        <div className="absolute inset-0 bg-white z-[200] flex flex-col items-center p-6 pt-24 animate-slideUp">
            <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden">
             <div className="relative w-full h-1/2 border-b border-zinc-100 bg-zinc-50 flex flex-col">
               <input type="text" value={mintTitle} onChange={(e) => setMintTitle(e.target.value.slice(0, 20))} placeholder="TITLE" className="w-full h-10 px-4 text-[10px] font-bold tracking-widest uppercase bg-white/80 border-b border-zinc-100 outline-none" />
