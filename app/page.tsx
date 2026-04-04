@@ -9,6 +9,21 @@ export default function Room138() {
   const [tapCount, setTapCount] = useState(0);
   const [targetConfig, setTargetConfig] = useState({ color: '', taps: 0 });
   const [startY, setStartY] = useState(0);
+  const [currentCard, setCurrentCard] = useState<{ id: number; title: string; url: string } | null>(null);
+
+  // Room138 的な、どうでもいい10枚の野良カードデータ
+  const demoCards = [
+    { id: 1, title: '昨日のレバニラ定食', url: 'https://images.unsplash.com/photo-1623157618214-3d9a10129e74?q=80&w=400' },
+    { id: 2, title: '錆びた自転車のサドル', url: 'https://images.unsplash.com/photo-1596719875151-5b7f7eb01524?q=80&w=400' },
+    { id: 3, title: '品種別米粒画像（コシヒカリ）', url: 'https://images.unsplash.com/photo-1596377317730-01c56ac4d216?q=80&w=400' },
+    { id: 4, title: '中央線高架下のグラフィティ', url: 'https://images.unsplash.com/photo-1582234032608-f404d023253b?q=80&w=400' },
+    { id: 5, title: '雨に濡れたコインランドリーの看板', url: 'https://images.unsplash.com/photo-1593922728956-6f8ac29990e6?q=80&w=400' },
+    { id: 6, title: '誰かが捨てたビニール傘', url: 'https://images.unsplash.com/photo-1606404221769-95a2f58e0a82?q=80&w=400' },
+    { id: 7, title: '古びたアパートのポスト', url: 'https://images.unsplash.com/photo-1601614032135-23d2da0784be?q=80&w=400' },
+    { id: 8, title: '自動販売機の横のゴミ箱', url: 'https://images.unsplash.com/photo-1610486807981-b51c86518cb3?q=80&w=400' },
+    { id: 9, title: '誰もいない公園のブランコ', url: 'https://images.unsplash.com/photo-1603210332837-77b311cb1e08?q=80&w=400' },
+    { id: 10, title: 'ソトマワール氏（偽物）のサイン', url: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe1?q=80&w=400' }
+  ];
 
   const colors = [
     { name: '赤', code: '#FF4B4B' }, { name: '青', code: '#4B7BFF' },
@@ -16,9 +31,11 @@ export default function Room138() {
     { name: '紫', code: '#A64BFF' }, { name: '黒', code: '#000000' }
   ];
 
-  // 初期化：正解をランダム設定
+  // 初期化：正解とカードをランダム設定
   useEffect(() => {
     if (phase === 'APPEAR') {
+      const card = demoCards[Math.floor(Math.random() * 10)];
+      setCurrentCard(card);
       setTargetConfig({
         color: colors[Math.floor(Math.random() * 6)].code,
         taps: Math.floor(Math.random() * 3) + 1 // 1〜3回
@@ -40,7 +57,6 @@ export default function Room138() {
     setPhase('THROWING');
     setTimeout(() => {
       setPhase('RESULT');
-      // 判定：色と回数が完全一致
       const isColorMatch = selectedColor === targetConfig.color;
       const isTapMatch = tapCount === targetConfig.taps;
 
@@ -72,16 +88,33 @@ export default function Room138() {
           ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-[flip_1s_ease-in-out_5000ms_3]' : ''}
         `}
       >
-        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center relative overflow-hidden text-[10px] opacity-10 font-bold tracking-widest">
-          {status === 'SUCCESS' ? 'CAPTURED' : status === 'ESCAPED' ? 'BALETA' : '138'}
+        {/* カードの中身（画像） */}
+        <div className="w-56 h-72 bg-zinc-50 rounded flex flex-col items-center justify-center relative overflow-hidden p-2 border border-zinc-100">
+          <img src={currentCard?.url} alt={currentCard?.title} className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-10'}`} />
+          
+          {/* 判定中、または失敗時は画像を隠す */}
+          {phase !== 'RESULT' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10">
+              <div className="text-[10px] opacity-20 font-bold tracking-widest z-10">138</div>
+              <div className="text-[8px] opacity-10 font-bold tracking-[0.3em] uppercase absolute top-4 z-10">Double tap to duel</div>
+            </div>
+          )}
+          
+          {/* 結果表示時のタイトル */}
+          {phase === 'RESULT' && status === 'SUCCESS' && (
+            <div className="absolute bottom-2 left-2 right-2 bg-black/60 p-2 text-white text-center rounded">
+              <div className="text-[8px] tracking-[0.3em] font-bold uppercase">{currentCard?.title}</div>
+              <div className="text-[6px] opacity-50 mt-1">168 hours left</div>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* 手順1: 色選択（選択したら消える） */}
-        <div className={`absolute -bottom-16 flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          {colors.map((c) => (
-            <button key={c.name} onClick={() => { setSelectedColor(c.code); setPhase('CHARGE'); }} className="w-6 h-6 rounded-full shadow-sm active:scale-125" style={{ backgroundColor: c.code }} />
-          ))}
-        </div>
+      {/* 手順1: 色選択（選択したら消える） */}
+      <div className={`absolute bottom-24 flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        {colors.map((c) => (
+          <button key={c.name} onClick={() => { setSelectedColor(c.code); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm active:scale-125" style={{ backgroundColor: c.code }} />
+        ))}
       </div>
 
       {/* 手順2: 三角ボタンを叩く */}
@@ -91,7 +124,7 @@ export default function Room138() {
         ${phase === 'THROWING' ? 'translate-y-[-250px] scale-0 opacity-0' : ''}
       `}>
         {/* 打ち込み回数インジケーター（1〜3） */}
-        <div className="flex gap-4 mb-6">
+        <div className="flex gap-4 mb-6 z-10">
           {[...Array(3)].map((_, i) => (
             <div key={i} className={`w-3 h-3 rounded-full border-2 border-zinc-300 transition-all duration-300 ${tapCount > i ? 'bg-zinc-800 border-zinc-800' : 'bg-transparent'}`} />
           ))}
@@ -99,14 +132,14 @@ export default function Room138() {
 
         {/* 三角ボタン */}
         <button 
-          onClick={() => setTapCount(prev => Math.min(prev + 1, 3))} // 最大3回
+          onClick={() => setTapCount(prev => Math.min(prev + 1, 3))}
           onTouchStart={onTouchStart} onTouchMove={onTouchMove}
-          className="relative w-20 h-24 flex items-end justify-center active:scale-95 transition-transform"
+          className="relative w-24 h-28 flex items-end justify-center active:scale-95 transition-transform"
         >
-          <svg width="70" height="90" viewBox="0 0 70 90">
-            <path d="M35 0L70 90H0L35 0Z" fill={selectedColor || '#CCC'} className="transition-colors duration-300" />
+          <svg width="80" height="100" viewBox="0 0 80 100">
+            <path d="M40 0L80 100H0L40 0Z" fill={selectedColor || '#CCC'} className="transition-colors duration-300" />
           </svg>
-          <div className="absolute bottom-4 text-[8px] font-black text-white uppercase tracking-tighter">
+          <div className="absolute bottom-5 text-[8px] font-black text-white uppercase tracking-tighter">
             {tapCount === 0 ? 'TAP TO START' : 'TAP & FLICK'}
           </div>
         </button>
@@ -115,7 +148,7 @@ export default function Room138() {
       {/* 判定表示（デモ用） */}
       {phase === 'RESULT' && (
         <div className="absolute top-24 text-[10px] tracking-[1.5em] font-black opacity-30 animate-pulse">
-          {status === 'SUCCESS' ? 'CAPTURED' : 'ESCAPED'}
+          {status === 'SUCCESS' ? 'CAPTURED' : 'MISSED'}
         </div>
       )}
 
