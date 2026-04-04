@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// ユニークなカードナンバーを生成するための簡易カウンター（リロードでリセットされます）
+// カードナンバー用（簡易実装）
 let cardCounter = 138001;
 
 export default function Room138() {
@@ -24,11 +24,11 @@ export default function Room138() {
   const [mintCardNumber, setMintCardNumber] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // データ（フィッシング用デモカード）
   const demoCards = [
     { id: 1, title: '昨日のレバニラ定食', url: 'https://images.unsplash.com/photo-1623157618214-3d9a10129e74?q=80&w=400' },
     { id: 2, title: '錆びた自転車のサドル', url: 'https://images.unsplash.com/photo-1596719875151-5b7f7eb01524?q=80&w=400' },
-    { id: 10, title: 'ソトマワール氏（偽物）のサイン', url: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe1?q=80&w=400' }
+    { id: 3, title: '品種別米粒（コシヒカリ）', url: 'https://images.unsplash.com/photo-1596377317730-01c56ac4d216?q=80&w=400' },
+    { id: 10, title: 'ソトマワール氏（偽物）', url: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe1?q=80&w=400' }
   ];
 
   const colors = [
@@ -37,7 +37,6 @@ export default function Room138() {
     { name: '紫', code: '#A64BFF' }, { name: '黒', code: '#000000' }
   ];
 
-  // フィッシング初期化
   useEffect(() => {
     if (mode === 'FISHING' && phase === 'APPEAR') {
       const card = demoCards[Math.floor(Math.random() * demoCards.length)];
@@ -53,7 +52,6 @@ export default function Room138() {
   }, [phase, mode]);
 
   // フィッシング操作
-  const onThrowStart = (e: React.TouchEvent) => setStartY(e.touches[0].clientY);
   const onThrowMove = (e: React.TouchEvent) => {
     if (phase !== 'CHARGE' || tapCount === 0) return;
     if (startY - e.touches[0].clientY > 60) {
@@ -71,77 +69,52 @@ export default function Room138() {
     }
   };
 
-  // 生成（ミント）操作
-  const openMintInput = () => {
-    setMintTitle('');
-    setMintText('');
-    setMintImage(null);
-    setMintCardNumber(cardCounter++);
-    setMode('MINT');
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setMintImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleMintRelease = () => {
-    // ここで本来はデータをサーバーに保存する
-    console.log('Minted:', { mintTitle, mintText, mintImage, mintCardNumber });
-    alert(`CARD NO.${mintCardNumber} を発行しました。 (デモ)`);
-    setMode('FISHING');
-    setPhase('APPEAR');
-  };
-
   return (
     <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
-      <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-50">
-        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
+      <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[60]">
+        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">Rubbish</h1>
         <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">USER: TEST</span>
       </header>
 
       {/* --- フィッシングモード --- */}
       {mode === 'FISHING' && (
         <>
-          {/* Card Visual */}
           <div onDoubleClick={() => phase === 'APPEAR' && setPhase('COLOR')}
-            className={`relative w-64 aspect-[1/1.4] rounded-lg border border-zinc-200 bg-white shadow-sm flex flex-col items-center justify-center transition-all duration-[800ms] z-20
+            style={{ aspectRatio: '1 / 1.618' }}
+            className={`relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-sm flex flex-col overflow-hidden transition-all duration-[800ms] z-20
               ${phase === 'APPEAR' ? 'scale-90 opacity-40' : 'scale-100 opacity-100'}
               ${status === 'ESCAPED' && phase === 'RESULT' ? 'delay-[5000ms] translate-x-[150vw] -rotate-12' : ''}
               ${status === 'SUCCESS' && phase === 'RESULT' ? 'animate-[flip_1s_ease-in-out_5000ms_3]' : ''}
             `}
           >
-            <div className="w-56 h-72 bg-zinc-50 rounded flex flex-col items-center justify-center relative overflow-hidden p-2 border border-zinc-100">
-              <img src={currentCard?.url} alt={currentCard?.title} className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-10'}`} />
-              {phase !== 'RESULT' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10">
-                  <div className="text-[10px] opacity-20 font-bold tracking-widest z-10">138</div>
-                </div>
-              )}
-              {phase === 'RESULT' && status === 'SUCCESS' && (
-                <div className="absolute bottom-2 left-2 right-2 bg-black/60 p-2 text-white text-center rounded z-20">
-                  <div className="text-[8px] tracking-[0.3em] font-bold uppercase">{currentCard?.title}</div>
-                  <div className="text-[6px] opacity-50 mt-1">168 hours left</div>
-                </div>
-              )}
+            {/* 上半分：画像エリア */}
+            <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center">
+              <img src={currentCard?.url} alt="" className={`w-full h-full object-cover transition-opacity duration-1000 ${phase === 'RESULT' ? 'opacity-100' : 'opacity-0'}`} />
+              {phase !== 'RESULT' && <div className="absolute inset-0 bg-white/90 flex items-center justify-center"><span className="text-[10px] opacity-10 font-black tracking-widest">138</span></div>}
+            </div>
+            {/* 下半分：テキストエリア（空） */}
+            <div className="flex-1 p-4 bg-white relative">
+               {phase === 'RESULT' && status === 'SUCCESS' && (
+                 <>
+                   <div className="text-[10px] font-bold tracking-widest uppercase mb-2">{currentCard?.title}</div>
+                   <div className="text-[8px] opacity-40 leading-relaxed">Captured artifact data.<br/>168 hours until deletion.</div>
+                   <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{String(currentCard?.id).padStart(6, '0')} | LOT 01/150</div>
+                 </>
+               )}
             </div>
           </div>
 
-          {/* 操作UI */}
+          {/* 操作パネル */}
           <div className="absolute bottom-32 w-full flex flex-col items-center z-30">
-            {/* 色選択 */}
+            {/* 手順1: 色選択 */}
             <div className={`flex gap-4 transition-all duration-500 ${phase === 'COLOR' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {colors.map((c) => (
                 <button key={c.name} onClick={() => { setSelectedColor(c.code); setPhase('CHARGE'); }} className="w-8 h-8 rounded-full shadow-sm" style={{ backgroundColor: c.code }} />
               ))}
             </div>
-            {/* 三角ボタン */}
-            <div onTouchStart={onThrowStart} onTouchMove={onThrowMove}
+            {/* 手順2: チャージ＆フリック */}
+            <div onTouchStart={(e) => setStartY(e.touches[0].clientY)} onTouchMove={onThrowMove}
               className={`flex flex-col items-center transition-all duration-500 ${(phase === 'CHARGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'} ${phase === 'THROWING' ? 'translate-y-[-250px] scale-0 opacity-0' : ''}`}>
               <div className="flex gap-4 mb-6">
                 {[...Array(3)].map((_, i) => <div key={i} className={`w-3 h-3 rounded-full border-2 border-zinc-300 ${tapCount > i ? 'bg-zinc-800 border-zinc-800' : ''}`} />)}
@@ -152,89 +125,49 @@ export default function Room138() {
               </button>
             </div>
           </div>
+
+          {/* ◎生成ボタン：フィッシング（デュエル）が始まるとスッと消える */}
+          <footer className={`absolute bottom-0 w-full h-24 flex items-center justify-center z-40 transition-all duration-500 ${phase === 'APPEAR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+            <button onClick={() => { setMintCardNumber(cardCounter++); setMode('MINT'); }} className="w-14 h-14 rounded-full bg-white border border-zinc-200 shadow-xl flex items-center justify-center active:scale-90 transition-all">
+              <div className="w-8 h-8 rounded-full border-[6px] border-zinc-900" />
+            </button>
+          </footer>
         </>
       )}
 
       {/* --- 生成（ミント）モード --- */}
       {mode === 'MINT' && (
-        <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center p-6 pt-24 animate-slideInUp">
-          {/* 1.618:1 空カード */}
-          <div className="relative w-72 aspect-[1/1.618] rounded-[12px] border border-zinc-200 bg-white shadow-xl flex flex-col overflow-hidden">
-            
-            {/* 上半分：画像＆ヘッダー */}
+        <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center p-6 pt-24 animate-slideUp">
+          <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden">
             <div className="relative w-full h-1/2 border-b border-zinc-100 bg-zinc-50 flex flex-col">
-              {/* ヘッダー：タイトル入力 */}
-              <input 
-                type="text" 
-                value={mintTitle}
-                onChange={(e) => setMintTitle(e.target.value.slice(0, 20))}
-                placeholder="TITLE (max 20)"
-                className="w-full h-8 px-3 text-[10px] font-bold tracking-widest uppercase bg-white/80 border-b border-zinc-100 outline-none placeholder:opacity-30"
-              />
-              {/* 画像エリア */}
-              <div className="flex-1 flex items-center justify-center relative group">
-                {mintImage ? (
-                  <img src={mintImage} alt="Mint preview" className="w-full h-full object-cover" />
-                ) : (
-                  <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 rounded-full border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-300 text-3xl font-light hover:border-zinc-400 hover:text-zinc-500">+</button>
-                )}
-                {/* 画像がある場合の変更ボタン */}
-                {mintImage && (
-                   <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 bg-black/50 text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100">CHANGE</button>
-                )}
+              <input type="text" value={mintTitle} onChange={(e) => setMintTitle(e.target.value.slice(0, 20))} placeholder="TITLE" className="w-full h-10 px-4 text-[10px] font-bold tracking-widest uppercase bg-white/80 border-b border-zinc-100 outline-none" />
+              <div className="flex-1 flex items-center justify-center relative">
+                {mintImage ? <img src={mintImage} alt="" className="w-full h-full object-cover" onClick={() => fileInputRef.current?.click()} /> : <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 rounded-full border-2 border-dashed border-zinc-200 text-zinc-300 text-2xl">+</button>}
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setMintImage(reader.result as string); reader.readAsDataURL(file); } }} accept="image/*" className="hidden" />
             </div>
-
-            {/* 下半分：テキストエリア */}
-            <div className="relative flex-1 p-4 flex flex-col">
-              <textarea 
-                value={mintText}
-                onChange={(e) => setMintText(e.target.value.slice(0, 140))}
-                placeholder="DESCRIPTION (max 140)"
-                className="w-full flex-1 text-[10px] leading-relaxed bg-transparent outline-none resize-none placeholder:opacity-30"
-              />
-              {/* カードナンバー */}
-              <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center text-[8px] font-mono opacity-40 tracking-tight">
+            <div className="relative flex-1 p-5 flex flex-col">
+              <textarea value={mintText} onChange={(e) => setMintText(e.target.value.slice(0, 140))} placeholder="DESCRIPTION..." className="w-full flex-1 text-[10px] leading-relaxed bg-transparent outline-none resize-none" />
+              <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40">
                 <span>NO.{String(mintCardNumber).padStart(6, '0')}</span>
                 <span>LOT 01/150</span>
               </div>
             </div>
           </div>
-
-          {/* 操作ボタン */}
-          <div className="mt-12 w-full max-w-sm flex gap-4 px-6">
+          <div className="mt-12 w-full max-w-[256px] flex gap-4">
             <button onClick={() => setMode('FISHING')} className="flex-1 py-3 border border-zinc-200 text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-50">CANCEL</button>
-            <button onClick={handleMintRelease} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-700">RELEASE</button>
+            <button onClick={() => { alert('RELEASED'); setMode('FISHING'); setPhase('APPEAR'); }} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase active:bg-zinc-700">RELEASE</button>
           </div>
         </div>
       )}
 
-      {/* --- 最下部：生成起動ボタン（フィッシング時は常駐、ミント時は消える） --- */}
-      {mode === 'FISHING' && (
-        <footer className="absolute bottom-0 w-full h-20 flex items-center justify-center z-40">
-          <button 
-            onClick={openMintInput}
-            className="w-12 h-12 rounded-full bg-white border border-zinc-200 shadow-lg flex items-center justify-center active:scale-95 transition-transform"
-          >
-            <div className="w-6 h-6 rounded-full border-4 border-zinc-900" />
-          </button>
-        </footer>
-      )}
+      {/* 判定表示 */}
+      {phase === 'RESULT' && <div className="absolute top-24 text-[10px] tracking-[1.5em] font-black opacity-30 animate-pulse">{status === 'SUCCESS' ? 'CAPTURED' : 'BALETA'}</div>}
 
       <style jsx global>{`
-        @keyframes flip {
-          0% { transform: rotateY(0); }
-          50% { transform: rotateY(180deg); }
-          100% { transform: rotateY(360deg); }
-        }
-        @keyframes slideInUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slideInUp {
-          animation: slideInUp 0.5s ease-out forwards;
-        }
+        @keyframes flip { 0% { transform: rotateY(0); } 50% { transform: rotateY(180deg); } 100% { transform: rotateY(360deg); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
   );
