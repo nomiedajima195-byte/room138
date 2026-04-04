@@ -1,139 +1,139 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function ThrowCatchTest() {
+export default function Room138() {
   const [status, setStatus] = useState<'IDLE' | 'CHARGING' | 'THROWING' | 'SUCCESS' | 'ESCAPED'>('IDLE');
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [tapCount, setTapCount] = useState(0);
   const [targetTaps, setTargetTaps] = useState(0);
-  const [isFlicking, setIsFlicking] = useState(false);
   const [startY, setStartY] = useState(0);
 
-  // 1. 長押しで準備 (0.8s)
-  const handleStart = () => {
-    if (status !== 'IDLE') return;
-    const timer = setTimeout(() => {
-      setTargetTaps(Math.floor(Math.random() * 7)); // 0~6の正解
-      setStatus('CHARGING');
-      setTapCount(0);
-    }, 800);
-    return () => clearTimeout(timer);
+  const colors = [
+    { name: '赤', code: '#FF4B4B' },
+    { name: '青', code: '#4B7BFF' },
+    { name: '黄', code: '#FFD600' },
+    { name: '緑', code: '#00D656' },
+    { name: '紫', code: '#A64BFF' },
+    { name: '黒', code: '#000000' }
+  ];
+
+  useEffect(() => {
+    // 0〜6の正解回数をランダム設定
+    setTargetTaps(Math.floor(Math.random() * 7));
+  }, [status === 'IDLE']);
+
+  const handlePressStart = () => {
+    if (status !== 'IDLE' || !selectedColor) return;
+    setStatus('CHARGING');
+    setTapCount(0);
   };
 
-  // 2. フリック（投擲）の開始
-  const onFlickStart = (e: React.MouseEvent | React.TouchEvent) => {
-    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setStartY(y);
-  };
-
-  const onFlickMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const onTouchStart = (e: React.TouchEvent) => setStartY(e.touches[0].clientY);
+  const onTouchMove = (e: React.TouchEvent) => {
     if (status !== 'CHARGING') return;
-    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    if (startY - y > 100) { // 100px以上上にフリックしたら投げた判定
+    const currentY = e.touches[0].clientY;
+    if (startY - currentY > 60) {
       handleThrow();
     }
   };
 
   const handleThrow = () => {
-    setIsFlicking(true);
     setStatus('THROWING');
-    
-    // 投げたボタンがカードに到達するまでのラグ演出
     setTimeout(() => {
-      judge();
+      if (tapCount === targetTaps) {
+        setStatus('SUCCESS');
+      } else {
+        setStatus('ESCAPED');
+        setTimeout(() => {
+          setStatus('IDLE');
+          setSelectedColor(null);
+        }, 2000);
+      }
     }, 600);
   };
 
-  // 3. 判定
-  const judge = () => {
-    if (tapCount === targetTaps) {
-      setStatus('SUCCESS');
-    } else {
-      setStatus('ESCAPED');
-      setTimeout(() => {
-        setStatus('IDLE');
-        setIsFlicking(false);
-      }, 1500);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center font-sans select-none overflow-hidden">
+    <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
       
-      {/* Room136 Header */}
-      <header className="fixed top-0 w-full h-16 flex items-center justify-between px-8 border-b border-white/5">
-        <div className="text-[10px] tracking-[0.5em] font-black opacity-40 uppercase">room136</div>
-        <div className="text-[10px] font-mono opacity-20">SESSION_TEST</div>
+      {/* Header: room138 */}
+      <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white">
+        <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
+        <span className="text-[10px] tracking-[0.2em] font-bold opacity-30">USER: TEST</span>
       </header>
 
-      {/* Card Area */}
-      <div className="relative group">
-        <div 
-          onMouseDown={handleStart}
-          className={`
-            w-60 aspect-[1/1.618] rounded-[12px] border border-white/10 bg-zinc-900
-            flex items-center justify-center transition-all duration-700 relative
-            ${status === 'ESCAPED' ? 'translate-x-[250%] rotate-45 opacity-0' : ''}
-            ${status === 'SUCCESS' ? 'shadow-[0_0_60px_rgba(255,255,255,0.15)] bg-zinc-800 scale-105' : ''}
-          `}
-        >
-          {status === 'IDLE' && <div className="text-4xl font-black italic opacity-10">136</div>}
-          
-          {/* 成功/失敗時の一瞬の表側プレビュー */}
-          {(status === 'SUCCESS' || status === 'ESCAPED') && (
-            <div className="w-full h-full p-3 flex flex-col animate-in fade-in duration-300">
-               <div className="flex-1 bg-zinc-800 rounded-sm mb-4 overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-900 opacity-50" />
-               </div>
-               <div className="h-2 w-2/3 bg-white/10 mb-2" />
-               <div className="h-2 w-1/3 bg-white/5" />
-            </div>
-          )}
-
-          {/* 衝撃エフェクト（ボタンが当たった瞬間） */}
-          {status === 'THROWING' && (
-            <div className="absolute inset-0 bg-white/5 animate-pulse rounded-[12px]" />
-          )}
+      {/* Card Area (Demo Card) */}
+      <div 
+        className={`
+          relative w-64 aspect-[1/1.4] rounded-lg border border-zinc-200 bg-white shadow-sm
+          flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]
+          ${status === 'ESCAPED' ? '-translate-y-[120vh] rotate-[15deg] opacity-0' : ''}
+          ${status === 'SUCCESS' ? 'shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-zinc-400 scale-105' : ''}
+        `}
+      >
+        <div className="text-[8px] tracking-[0.3em] opacity-20 absolute top-4">ARTIFACT NO. 138</div>
+        <div className="w-48 h-48 bg-zinc-50 rounded flex items-center justify-center overflow-hidden">
+           {/* ここに将来的にラーメンや米粒の画像が入る */}
+           <div className="text-[10px] opacity-10">NO DATA</div>
         </div>
-
-        {/* Throw UI (投げ当てるボタン) */}
-        {(status === 'CHARGING' || status === 'THROWING') && (
-          <div 
-            className={`
-              absolute -bottom-40 left-0 right-0 flex flex-col items-center gap-6
-              transition-all duration-500 ease-in-out
-              ${status === 'THROWING' ? '-translate-y-[400px] opacity-0 scale-50' : 'translate-y-0 opacity-100'}
-            `}
-            onMouseDown={onFlickStart}
-            onMouseMove={onFlickMove}
-            onTouchStart={onFlickStart}
-            onTouchMove={onFlickMove}
-          >
-            {/* タップ数インジケーター */}
-            <div className="flex gap-1.5 h-2">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={`w-1.5 h-1.5 rounded-full border border-white/10 transition-all ${tapCount > i ? 'bg-white shadow-[0_0_8px_white]' : 'bg-transparent'}`} />
-              ))}
-            </div>
-
-            {/* 投げ当てるボタン */}
-            <button 
-              onClick={() => status === 'CHARGING' && setTapCount(t => Math.min(t + 1, 6))}
-              className="w-20 h-20 border-2 border-white/20 rounded-full flex items-center justify-center group active:scale-90 transition-transform"
-            >
-              <div className="text-[10px] font-black tracking-tighter opacity-40 group-active:opacity-100">
-                {status === 'THROWING' ? '' : 'FLICK'}
-              </div>
-              {/* フリックガイド */}
-              <div className="absolute -top-6 animate-bounce opacity-20">↑</div>
-            </button>
-            <div className="text-[8px] tracking-[0.4em] opacity-30">TAP: {tapCount} / 6</div>
-          </div>
-        )}
+        
+        {/* 色選択ドット */}
+        <div className="absolute -bottom-12 flex gap-3">
+          {colors.map((c) => (
+            <button
+              key={c.name}
+              onClick={() => status === 'IDLE' && setSelectedColor(c.code)}
+              className={`w-5 h-5 rounded-full transition-all duration-200 border-2 ${selectedColor === c.code ? 'scale-125 border-zinc-400 shadow-md' : 'border-transparent opacity-60'}`}
+              style={{ backgroundColor: c.code }}
+            />
+          ))}
+        </div>
       </div>
 
+      {/* Controller Area */}
+      <div 
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        className={`
+          absolute bottom-16 flex flex-col items-center gap-8 transition-opacity duration-500
+          ${status === 'THROWING' || status === 'SUCCESS' || status === 'ESCAPED' ? 'opacity-0' : 'opacity-100'}
+          ${!selectedColor ? 'pointer-events-none opacity-20' : 'cursor-pointer'}
+        `}
+      >
+        {/* タップ回数インジケーター */}
+        <div className="flex gap-1.5">
+          {[...Array(6)].map((_, i) => (
+            <div 
+              key={i} 
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${tapCount > i ? 'bg-zinc-800' : 'bg-zinc-200'}`} 
+            />
+          ))}
+        </div>
+
+        {/* 二等辺三角形の投擲ボタン */}
+        <div 
+          className="relative w-20 h-24 flex items-end justify-center active:scale-90 transition-transform"
+          onClick={() => status === 'CHARGING' && setTapCount(prev => Math.min(prev + 1, 6))}
+          onTouchStart={handlePressStart}
+        >
+          <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path 
+              d="M40 0L80 100H0L40 0Z" 
+              fill={selectedColor || '#E4E4E7'} 
+              className="transition-colors duration-300 opacity-80"
+            />
+          </svg>
+          <div className="absolute bottom-4 text-[8px] font-bold text-white tracking-widest">
+            {status === 'IDLE' ? 'SET' : 'TAP'}
+          </div>
+        </div>
+      </div>
+
+      {/* 成功演出 */}
       {status === 'SUCCESS' && (
-        <div className="mt-16 text-[10px] tracking-[1.5em] text-white animate-pulse">CAPTURED</div>
+        <div className="absolute top-1/2 -translate-y-1/2 text-[10px] tracking-[1.5em] font-black text-zinc-400 animate-pulse">
+          CAPTURED
+        </div>
       )}
     </div>
   );
