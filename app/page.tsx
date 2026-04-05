@@ -186,4 +186,4 @@ export default function Room138() {
 
 // 補助関数
 function getCardRotation() { /* 前回のロジック */ }
-function getCardAnimationClass() { /* 前回のロジック */ }
+function getCardAnimationClass() { /* 前回のロジック */ }　
