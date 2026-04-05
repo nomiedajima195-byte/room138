@@ -44,7 +44,7 @@ export default function Room138() {
       setCurrentCard(cards[Math.floor(Math.random() * cards.length)]);
       setTargetConfig({
         color: ['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'][Math.floor(Math.random() * 6)],
-        taps: Math.floor(Math.random() * 6) + 1 // ★ 1〜6回に変更
+        taps: Math.floor(Math.random() * 6) + 1
       });
       setStatus('IDLE');
       setSelectedColor(null);
@@ -99,7 +99,7 @@ export default function Room138() {
   const enterDuelMode = () => { if (phase === 'APPEAR') setPhase('COLOR'); };
 
   return (
-    <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none">
+    <div className="fixed inset-0 bg-[#F5F5F5] text-zinc-900 flex flex-col items-center justify-center overflow-hidden font-sans select-none touch-none perspective-[1000px]">
       
       <header className="absolute top-0 w-full h-16 flex items-center justify-between px-6 border-b border-zinc-200 bg-white z-[100]">
         <h1 className="text-[10px] tracking-[0.5em] font-black uppercase opacity-40">room138</h1>
@@ -124,10 +124,9 @@ export default function Room138() {
               ${status === 'HIT' ? 'animate-shake' : ''}
               ${status === 'MISSED' ? 'animate-missed' : ''}
             `}
-            style={{ perspective: '1000px' }} 
           >
             <div 
-              className={`relative w-full h-full rounded-[12px] border border-zinc-200 shadow-sm
+              className={`relative w-full h-full rounded-[12px]
                 ${phase === 'APPEAR' ? 'transition-none' : 'transition-transform duration-500'}
                 ${getCardAnimationClass()}
               `}
@@ -136,37 +135,61 @@ export default function Room138() {
                 transform: getCardRotation(), 
               }}
             >
-              <div className="absolute inset-0 bg-white rounded-[12px] flex items-center justify-center p-4 border border-zinc-100" style={{ backfaceVisibility: 'hidden' }}>
-                <div className="w-full h-full border border-zinc-50 rounded-[8px] flex items-center justify-center">
+              {/* カード裏面 */}
+              <div className="absolute inset-0 bg-white rounded-[12px] flex items-center justify-center p-4 border border-zinc-200 shadow-sm" style={{ backfaceVisibility: 'hidden' }}>
+                <div className="w-full h-full border border-zinc-50 rounded-[8px] flex items-center justify-center bg-[#fdfdfd]">
                   <span className="text-[10px] opacity-20 font-black tracking-widest uppercase">room138</span>
                 </div>
               </div>
 
-              <div onDoubleClick={enterDuelMode} className="absolute inset-0 bg-white rounded-[12px] flex flex-col overflow-hidden border border-zinc-100" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center border-b border-zinc-100">
-                  {currentCard?.url && <img src={currentCard.url} alt="" className="w-full h-full object-cover" />}
+              {/* --- カード表面：ホログラム・フレームを実装 --- */}
+              <div onDoubleClick={enterDuelMode} className="absolute inset-0 rounded-[12px] flex flex-col overflow-hidden border border-zinc-100 shadow-sm group" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                
+                {/* ✨ ホログラム・フレーム（外枠）レイヤー */}
+                <div className="absolute inset-0 z-0 p-[8px] animate-hologram-frame" style={{
+                  background: 'linear-gradient(90deg, #ff00d0, #ffea00, #00ff40, #0099ff, #ff00d0)',
+                  backgroundSize: '200% auto',
+                  borderRadius: '12px',
+                }}>
+                  {/* フレームの内側（コンテンツエリア）を白で塗りつぶす */}
+                  <div className="w-full h-full bg-white rounded-[6px] flex flex-col overflow-hidden">
+                    
+                    {/* 上半分：画像 */}
+                    <div className="w-full h-1/2 bg-zinc-50 relative overflow-hidden flex items-center justify-center border-b border-zinc-100">
+                      {currentCard?.url && <img src={currentCard.url} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                    
+                    {/* 下半分：テキスト */}
+                    <div className="flex-1 p-4 bg-white relative flex flex-col justify-center">
+                       {currentCard && (
+                         <div>
+                           <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard.title}</div>
+                           <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard.text}</div>
+                           <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard.id}</div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 p-4 bg-white relative flex flex-col justify-center">
-                   {currentCard && (
-                     <div>
-                       <div className="text-[10px] font-bold tracking-widest uppercase mb-2 line-clamp-1">{currentCard.title}</div>
-                       <div className="text-[8px] opacity-40 leading-relaxed line-clamp-3">{currentCard.text}</div>
-                       <div className="absolute bottom-3 left-4 text-[7px] font-mono opacity-30 uppercase tracking-tighter">NO.{currentCard.id}</div>
-                     </div>
-                   )}
-                </div>
+
+                {/* ✨ ホログラムオーバーレイレイヤー（全体の光沢） */}
+                <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none animate-hologram-sweep" style={{
+                  background: 'linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(200,255,255,0.4) 50%, rgba(255,200,255,0.4) 60%, rgba(255,255,255,0) 70%, rgba(255,255,255,0) 100%)',
+                  backgroundSize: '200% 100%',
+                  mixBlendMode: 'color-dodge',
+                }}></div>
               </div>
+              
             </div>
           </div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-20 z-50 pointer-events-none">
-            <div className={`flex gap-4 mb-6 transition-all duration-700 pointer-events-auto ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+            <div className={`flex gap-4 mb-3 transition-all duration-700 pointer-events-auto ${phase === 'COLOR' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
               {['#FF4B4B', '#4B7BFF', '#FFD600', '#00D656', '#A64BFF', '#000000'].map((c) => (
                 <button key={c} onClick={() => setSelectedColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${selectedColor === c ? 'scale-125 border-zinc-900 shadow-xl' : 'border-transparent'}`} style={{ backgroundColor: c }} />
               ))}
             </div>
 
-            {/* ★ タップ回数表示：6個並ぶように調整 */}
             <div className={`flex gap-3 mb-6 transition-all duration-700 ${phase === 'CHALLENGE' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {[...Array(6)].map((_, i) => (
                 <div key={i} className={`w-3 h-3 rounded-full border-2 border-zinc-300 transition-all ${tapCount > i ? 'bg-zinc-900 border-zinc-900 scale-110' : ''}`} />
@@ -183,7 +206,7 @@ export default function Room138() {
               className={`flex flex-col items-center transition-all duration-700 pointer-events-auto
               ${(phase === 'COLOR' || phase === 'CHALLENGE') ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}
               ${(phase === 'HOOKING' || phase === 'LANDING') ? 'translate-y-[-300px] scale-0 opacity-0' : ''}`}>
-              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 6)); }} // ★ 上限を6に変更
+              <button onClick={() => { if(phase === 'CHALLENGE') setTapCount(prev => Math.min(prev + 1, 6)); }} 
                 className="relative w-24 h-28 flex items-end justify-center active:scale-95 transition-transform">
                 <svg width="80" height="100" viewBox="0 0 80 100"><path d="M40 0L80 100H0L40 0Z" fill={selectedColor || '#CCC'} /></svg>
                 <div className="absolute bottom-5 text-[8px] font-black text-white uppercase tracking-tighter">
@@ -202,8 +225,8 @@ export default function Room138() {
       )}
 
       {mode === 'MINT' && (
-        <div className="absolute inset-0 bg-white z-[200] flex flex-col items-center p-6 pt-24 animate-slideUp">
-           <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden">
+        <div className="absolute inset-0 bg-white z-[200] flex flex-col items-center p-6 pt-24 animate-slideUp overflow-auto">
+           <div style={{ aspectRatio: '1 / 1.618' }} className="relative w-64 rounded-[12px] border border-zinc-200 bg-white shadow-2xl flex flex-col overflow-hidden flex-shrink-0">
             <div className="relative w-full h-1/2 border-b border-zinc-100 bg-zinc-50 flex flex-col">
               <input type="text" value={mintTitle} onChange={(e) => setMintTitle(e.target.value.slice(0, 20))} placeholder="TITLE" className="w-full h-10 px-4 text-[10px] font-bold tracking-widest uppercase bg-white/80 border-b border-zinc-100 outline-none" />
               <div className="flex-1 flex items-center justify-center relative">
@@ -216,14 +239,14 @@ export default function Room138() {
               <div className="absolute bottom-4 left-5 right-5 flex justify-between items-center text-[8px] font-mono opacity-40"><span>ARTIFACT</span><span>LOT 01/150</span></div>
             </div>
           </div>
-          <div className="mt-12 w-full max-w-[256px] flex gap-4 px-4">
-            <button onClick={() => setMode('FISHING')} className="flex-1 py-3 border border-zinc-200 text-[10px] font-bold tracking-[0.3em] uppercase">CANCEL</button>
+          <div className="mt-12 w-full max-w-[256px] flex gap-4 px-4 pb-12 flex-shrink-0">
+            <button onClick={() => setMode('FISHING')} className="flex-1 py-3 border border-zinc-200 text-[10px] font-bold tracking-[0.3em] uppercase cancel-btn">CANCEL</button>
             <button onClick={() => {
               if (!mintImage && !mintTitle) return alert('EMPTY');
               const newCard = { id: Date.now(), title: mintTitle || 'UNTITLED', text: mintText || '', url: mintImage || '' };
               localStorage.setItem('room138_cards', JSON.stringify([...getSavedCards(), newCard]));
               setMode('FISHING'); setPhase('APPEAR');
-            }} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase">RELEASE</button>
+            }} className="flex-1 py-3 bg-zinc-900 text-white text-[10px] font-bold tracking-[0.3em] uppercase release-btn">RELEASE</button>
           </div>
         </div>
       )}
@@ -236,6 +259,23 @@ export default function Room138() {
       </div>
 
       <style jsx global>{`
+        /* ✨ ホログラム・フレーム（外枠）アニメーション：虹色グラデーションを横に移動させる */
+        @keyframes hologram-frame {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-hologram-frame { animation: hologram-frame 3s linear infinite; }
+
+        /* ✨ 全体の光沢スウィープ（PCホバー時） */
+        @keyframes hologram-sweep {
+          0% { background-position: 200% 0; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { background-position: -200% 0; opacity: 0; }
+        }
+        .animate-hologram-sweep { animation: hologram-sweep 4s linear infinite; }
+
         @keyframes shake { 0%, 100% { transform: translateX(0) rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translateX(10px) rotate(1deg); } }
         .animate-shake { animation: shake 0.6s ease-in-out infinite; }
         @keyframes missed { 0% { transform: scale(1.1) rotateY(180deg); } 100% { transform: scale(1.1) rotateY(180deg) translateX(-150vw) rotate(-30deg); } }
